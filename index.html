@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Web Arcade | Volcan Studio HTML5 Games</title>
+  <style>
+    :root {
+      --bg-dark: #050a14;
+      --bg-panel: rgba(11, 22, 42, 0.85);
+      --border-glow: rgba(56, 189, 248, 0.35);
+      --accent-cyan: #38bdf8;
+      --accent-violet: #a855f7;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.14), transparent 45%),
+        radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.14), transparent 45%),
+        linear-gradient(180deg, #030711 0%, #091326 100%);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2.5rem 1.25rem;
+    }
+
+    header {
+      text-align: center;
+      max-width: 720px;
+      margin-bottom: 2.5rem;
+    }
+
+    .studio-tag {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent-cyan);
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 0.35rem 0.9rem;
+      border-radius: 999px;
+      margin-bottom: 1rem;
+    }
+
+    h1 {
+      font-size: clamp(2.2rem, 5vw, 3.4rem);
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      background: linear-gradient(90deg, #e0f2fe, #38bdf8, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.75rem;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      line-height: 1.6;
+    }
+
+    .arcade-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+      gap: 1.75rem;
+      width: 100%;
+      max-width: 960px;
+    }
+
+    .game-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-glow);
+      border-radius: 16px;
+      padding: 1.75rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+      transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .game-card:hover {
+      transform: translateY(-6px);
+      border-color: var(--accent-cyan);
+      box-shadow: 0 24px 50px rgba(56, 189, 248, 0.18);
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.25rem 0.65rem;
+      border-radius: 6px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .badge-3d {
+      background: rgba(56, 189, 248, 0.15);
+      color: #7dd3fc;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+    }
+
+    .badge-2d {
+      background: rgba(168, 85, 247, 0.15);
+      color: #d8b4fe;
+      border: 1px solid rgba(168, 85, 247, 0.4);
+    }
+
+    .version {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-family: monospace;
+    }
+
+    .game-card h2 {
+      font-size: 1.55rem;
+      margin-bottom: 0.6rem;
+      color: #ffffff;
+    }
+
+    .game-card p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.55;
+      margin-bottom: 1.25rem;
+    }
+
+    .feature-list {
+      list-style: none;
+      margin-bottom: 1.6rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .feature-list li {
+      font-size: 0.78rem;
+      color: #cbd5e1;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .btn-play {
+      flex: 1;
+      text-align: center;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 0.95rem;
+      padding: 0.8rem 1rem;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #0284c7, #38bdf8);
+      color: #030711;
+      transition: filter 0.2s ease;
+    }
+
+    .btn-play:hover {
+      filter: brightness(1.12);
+    }
+
+    .btn-changelog {
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.85rem;
+      padding: 0.8rem 0.95rem;
+      border-radius: 10px;
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s ease;
+    }
+
+    .btn-changelog:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    footer {
+      margin-top: 3rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    footer a {
+      color: var(--accent-cyan);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="studio-tag">Volcan Studio // HTML5 Browser Arcade</div>
+    <h1>WEB ARCADE</h1>
+    <p>Zero-install, single-file HTML5 action games built for instant browser play across desktop and mobile devices.</p>
+  </header>
+
+  <main class="arcade-grid">
+    <!-- Cyber Strike 3D -->
+    <article class="game-card">
+      <div>
+        <div class="card-top">
+          <span class="badge badge-3d">3D WebGL FPS</span>
+          <span class="version">v1.1.0</span>
+        </div>
+        <h2>Cyber Strike 3D</h2>
+        <p>Fast-paced 3D sci-fi arena shooter powered by Three.js. Battle endless waves of rogue synth-bots, customize a 3-slot weapon armory, and link up in browser-tab LAN rooms.</p>
+        <ul class="feature-list">
+          <li>30+ Sci-Fi Weapons</li>
+          <li>Attachments & Skins</li>
+          <li>2x Headshot Crits</li>
+          <li>Local Tab Multiplayer</li>
+          <li>Commander Upgrades</li>
+        </ul>
+      </div>
+      <div class="card-actions">
+        <a class="btn-play" href="./Cyber%20Strike%203D/index.html">Launch Game</a>
+        <a class="btn-changelog" href="./Cyber%20Strike%203D/CHANGELOG.md">Patch Notes</a>
+      </div>
+    </article>
+
+    <!-- Cyber Arena 2D -->
+    <article class="game-card">
+      <div>
+        <div class="card-top">
+          <span class="badge badge-2d">2D Canvas Action</span>
+          <span class="version">v1.0.0</span>
+        </div>
+        <h2>Cyber Arena 2D</h2>
+        <p>Ultra-optimized 60 FPS circular bot battle royale with auto-lock targeting, tactical sprint bursts, boss waves, risk zones, and daily credit missions.</p>
+        <ul class="feature-list">
+          <li>60 FPS Engine</li>
+          <li>Starting Perks</li>
+          <li>Boss Waves & Bounties</li>
+          <li>Daily Missions</li>
+          <li>Desktop + Touch</li>
+        </ul>
+      </div>
+      <div class="card-actions">
+        <a class="btn-play" href="./Cyber%20Arena%202D/index.html">Launch Game</a>
+        <a class="btn-changelog" href="./Cyber%20Arena%202D/CHANGELOG.md">Patch Notes</a>
+      </div>
+    </article>
+  </main>
+
+  <footer>
+    <p>Built with HTML5 Canvas, WebGL & Vanilla JavaScript &bull; <a href="https://github.com/livemaster4802/Web-Arcade" target="_blank" rel="noopener">GitHub Repository</a></p>
+  </footer>
+</body>
+</html>
