@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#060911">
     <title>Cyber Arena - Ultra-Optimized 2D Bot Shooter</title>
     <style>
         * {
@@ -20,14 +23,27 @@
             overflow: hidden;
             width: 100%;
             height: 100%;
+            margin: 0;
+            padding: 0;
             touch-action: none;
         }
+        html:fullscreen, body:fullscreen,
+        html:-webkit-full-screen, body:-webkit-full-screen {
+            width: 100vw !important;
+            height: 100vh !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+        }
         canvas {
+            position: fixed;
+            inset: 0;
             display: block;
             width: 100%;
             height: 100%;
             touch-action: none;
-            will-change: transform;
+            /* Avoid extra compositor layer that can contribute to tearing */
+            image-rendering: auto;
         }
 
         /* In-Game HUD */
@@ -35,7 +51,10 @@
             position: fixed;
             inset: 0;
             pointer-events: none;
-            padding: 14px 18px;
+            padding: 12px 14px;
+            padding-top: max(12px, env(safe-area-inset-top));
+            padding-left: max(12px, env(safe-area-inset-left));
+            padding-right: max(12px, env(safe-area-inset-right));
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
@@ -44,49 +63,51 @@
         .hud-left {
             display: flex;
             flex-direction: column;
-            gap: 7px;
+            gap: 6px;
+            max-width: 58%;
         }
         .hud-right {
             display: flex;
             align-items: flex-start;
-            gap: 8px;
+            gap: 6px;
         }
         .hud-controls-col {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
         }
         .hud-row {
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             font-weight: 700;
-            font-size: 13.5px;
-            letter-spacing: 0.4px;
+            font-size: 12.5px;
+            letter-spacing: 0.3px;
         }
         .bars-panel {
             background: rgba(15, 23, 42, 0.92);
-            padding: 7px 11px;
+            padding: 6px 9px;
             border-radius: 8px;
             border: 1px solid #334155;
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: 4px;
         }
         .bar-row {
             display: flex;
             align-items: center;
-            gap: 7px;
-            font-size: 12.5px;
+            gap: 6px;
+            font-size: 12px;
         }
         .bar-label {
-            width: 28px;
+            width: 26px;
             color: #94a3b8;
+            font-size: 11px;
         }
         .bar-container {
-            width: 125px;
-            height: 10px;
+            width: 110px;
+            height: 9px;
             background: #1e293b;
             border-radius: 5px;
             overflow: hidden;
@@ -138,13 +159,50 @@
             border: 1px solid currentColor;
         }
 
+        
+        /* HUD Inline SVG Icons */
+        .hud-ico {
+            width: 12px;
+            height: 12px;
+            flex-shrink: 0;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .btn-ico {
+            width: 16px;
+            height: 16px;
+            display: block;
+        }
+        .sprint-ico {
+            width: 28px;
+            height: 28px;
+            display: block;
+            filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.55));
+        }
+        .stat-badge, .feature-pill, .buff-pill, .bar-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .bar-label {
+            width: 16px;
+            justify-content: center;
+        }
+        .lb-title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         /* HUD Icon Buttons (Pause & Sound Toggle) */
         .hud-icon-btn {
             pointer-events: auto;
             touch-action: manipulation;
-            width: 40px;
-            height: 40px;
-            border-radius: 9px;
+            width: 44px;
+            height: 44px;
+            min-width: 44px;
+            min-height: 44px;
+            border-radius: 10px;
             background: rgba(15, 23, 42, 0.92);
             border: 1px solid #475569;
             color: #e2e8f0;
@@ -156,6 +214,7 @@
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+            -webkit-tap-highlight-color: transparent;
         }
         .hud-icon-btn:active {
             transform: scale(0.93);
@@ -199,10 +258,16 @@
         .lb-row {
             display: flex;
             justify-content: space-between;
-            gap: 10px;
+            gap: 6px;
             font-size: 12px;
             padding: 2px 0;
             color: #cbd5e1;
+        }
+        .lb-row span:first-child {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            min-width: 0;
         }
         .lb-row.me {
             color: #38bdf8;
@@ -218,14 +283,14 @@
         }
         #sprint-btn {
             position: fixed;
-            right: 22px;
-            bottom: 22px;
-            width: 74px;
-            height: 74px;
+            right: max(18px, env(safe-area-inset-right));
+            bottom: max(22px, env(safe-area-inset-bottom));
+            width: 80px;
+            height: 80px;
             border-radius: 50%;
-            background: transparent;
-            border: 2px solid rgba(56, 189, 248, 0.32);
-            color: rgba(224, 242, 254, 0.45);
+            background: rgba(15, 23, 42, 0.55);
+            border: 2.5px solid rgba(56, 189, 248, 0.4);
+            color: rgba(224, 242, 254, 0.7);
             font-weight: 800;
             font-size: 12px;
             letter-spacing: 1px;
@@ -237,11 +302,13 @@
             gap: 2px;
             pointer-events: auto;
             touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 4px 18px rgba(0,0,0,0.35);
         }
         #sprint-btn small {
-            font-size: 8.5px;
+            font-size: 9px;
             font-weight: 700;
-            opacity: 0.65;
+            opacity: 0.7;
         }
         #sprint-btn.active {
             transform: scale(0.94);
@@ -264,10 +331,13 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            justify-content: safe center;
             z-index: 20;
             padding: 16px;
             text-align: center;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
         }
         #main-menu {
             background: radial-gradient(circle at 50% 42%, rgba(14, 24, 48, 0.45) 0%, rgba(4, 7, 15, 0.88) 100%);
@@ -922,7 +992,7 @@
             .setting-row .btn-group { width: 290px; flex-shrink: 0; }
         }
         .back-btn { margin-top: 2px; }
-        .credits-pill { position: fixed; top: 14px; left: 18px; z-index: 25; display: flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 999px; background: rgba(15, 23, 42, 0.92); border: 1px solid rgba(251, 191, 36, 0.5); font-weight: 800; font-size: 13px; letter-spacing: 1px; color: #fbbf24; box-shadow: 0 0 14px rgba(251, 191, 36, 0.18); }
+        .credits-pill { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 6px 16px; margin-bottom: 14px; border-radius: 999px; background: rgba(15, 23, 42, 0.92); border: 1px solid rgba(251, 191, 36, 0.5); font-weight: 800; font-size: 13px; letter-spacing: 1px; color: #fbbf24; box-shadow: 0 0 14px rgba(251, 191, 36, 0.18); }
         .credits-pill .coin { width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fde68a, #f59e0b); box-shadow: 0 0 8px rgba(251, 191, 36, 0.7); }
         .credits-pill small { color: #94a3b8; font-size: 10px; letter-spacing: 1.5px; font-weight: 700; }
         .lb-row.king { color: #fbbf24; font-weight: 800; }
@@ -941,19 +1011,536 @@
         .pickup-list .ctrl-row b { margin-right: 6px; }
         .guide-tip { margin-top: 12px; padding: 9px 12px; font-size: 12px; line-height: 1.55; color: #94a3b8; border-left: 3px solid #38bdf8; background: rgba(56, 189, 248, 0.07); border-radius: 0 8px 8px 0; }
 
-        @media (max-width: 640px) {
-            #hud { padding: 10px 12px; }
-            .hud-row { font-size: 11.5px; gap: 5px; }
-            .hud-right { gap: 6px; }
-            .bars-panel { padding: 5px 8px; gap: 4px; }
-            .bar-row { font-size: 11px; gap: 5px; }
-            .bar-container { width: 82px; height: 8px; }
-            .stat-badge { padding: 4px 8px; }
-            .leaderboard { min-width: 122px; padding: 7px 9px; }
-            .lb-row { font-size: 10.5px; }
-            .hud-icon-btn { width: 34px; height: 34px; font-size: 11px; border-radius: 7px; }
-            #sprint-btn { width: 64px; height: 64px; right: 16px; bottom: 18px; font-size: 11px; }
-            .menu-card { padding: 16px 18px; }
+        /* ===== Android Portrait / Mobile Minimal UI ===== */
+        @media (orientation: portrait) and (max-width: 900px), (max-width: 500px) {
+            /* Compact non-overlapping HUD respecting screen notch */
+            #hud,
+            html.is-fullscreen #hud,
+            html:fullscreen #hud,
+            html:-webkit-full-screen #hud {
+                padding: 6px 8px !important;
+                padding-top: calc(max(4px, env(safe-area-inset-top)) + 24px) !important;
+                padding-left: max(8px, env(safe-area-inset-left)) !important;
+                padding-right: max(8px, env(safe-area-inset-right)) !important;
+                padding-bottom: max(8px, env(safe-area-inset-bottom)) !important;
+            }
+            .hud-left { max-width: 56%; gap: 3px; }
+            .hud-row { font-size: 9.5px; gap: 3px; flex-wrap: nowrap; }
+            .hud-right {
+                flex-direction: column-reverse;
+                align-items: flex-end;
+                gap: 4px;
+                z-index: 8;
+            }
+            .hud-controls-col {
+                flex-direction: row;
+                gap: 3px;
+            }
+            .bars-panel {
+                padding: 3px 5px;
+                gap: 2px;
+                border-radius: 6px;
+                background: rgba(15, 23, 42, 0.84);
+            }
+            .bar-row { font-size: 9.5px; gap: 3px; }
+            .hud-ico { width: 10px; height: 10px; }
+            .btn-ico { width: 14px; height: 14px; }
+            .sprint-ico { width: 24px; height: 24px; }
+            .bar-label { width: 13px; }
+            .bar-container { width: 56px; height: 5px; }
+            .bar-val { width: 19px; font-size: 9.5px; }
+            .stat-badge {
+                padding: 2px 5px;
+                font-size: 9.5px;
+                border-radius: 5px;
+                background: rgba(15, 23, 42, 0.84);
+                white-space: nowrap;
+            }
+            .hide-sm { display: none !important; }
+            .leaderboard {
+                min-width: 96px;
+                max-width: 118px;
+                padding: 4px 6px;
+                border-radius: 6px;
+                background: rgba(15, 23, 42, 0.84);
+            }
+            .lb-title { display: none; }
+            .lb-row { font-size: 9px; padding: 0.5px 0; gap: 4px; }
+            .leaderboard .lb-row:nth-child(n+4) { display: none; }
+            .hud-icon-btn {
+                width: 30px;
+                height: 30px;
+                min-width: 30px;
+                min-height: 30px;
+                font-size: 9px;
+                border-radius: 7px;
+            }
+            #sprint-btn {
+                width: 68px;
+                height: 68px;
+                right: max(12px, env(safe-area-inset-right));
+                bottom: max(14px, env(safe-area-inset-bottom));
+                font-size: 10px;
+            }
+            #sprint-btn small { font-size: 8px; }
+
+            /* Single-row ultra-slim top telemetry strip — respects notch & zero overlap with HUD */
+            #feature-hud,
+            html.is-fullscreen #feature-hud,
+            html:fullscreen #feature-hud,
+            html:-webkit-full-screen #feature-hud {
+                top: max(4px, env(safe-area-inset-top)) !important;
+                left: max(8px, env(safe-area-inset-left)) !important;
+                right: max(8px, env(safe-area-inset-right)) !important;
+                transform: none !important;
+                max-width: none !important;
+                flex-wrap: nowrap;
+                justify-content: space-between;
+                gap: 3px;
+                z-index: 6;
+            }
+            .feature-pill {
+                padding: 2px 6px;
+                font-size: 8px;
+                letter-spacing: 0.2px;
+                background: rgba(2, 6, 23, 0.84);
+            }
+            #feature-panel {
+                left: 8px;
+                bottom: max(92px, calc(env(safe-area-inset-bottom) + 82px));
+                max-width: 195px;
+                padding: 5px 8px;
+                font-size: 9.5px;
+                border-radius: 7px;
+            }
+            .buff-pill { padding: 1.5px 5px; font-size: 9px; border-radius: 4px; }
+            #buffs-row { gap: 3px; }
+
+            /* Screens & menus - full width, vertical, finger friendly */
+            .screen {
+                padding: 12px 14px;
+                padding-top: max(16px, env(safe-area-inset-top));
+                padding-bottom: max(16px, env(safe-area-inset-bottom));
+                justify-content: flex-start;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            h1 {
+                font-size: clamp(28px, 9vw, 42px);
+                letter-spacing: 2px;
+                margin-bottom: 4px;
+            }
+            .subtitle { font-size: 12.5px; margin-bottom: 14px; }
+            .title-emblem { font-size: 10px; padding: 3px 11px; margin-bottom: 8px; }
+            .menu-card {
+                padding: 14px 16px;
+                max-width: 100%;
+                border-radius: 12px;
+                margin-bottom: 14px;
+            }
+            .menu-hub { max-width: 100%; padding: 14px 14px; }
+            .primary-btn {
+                min-width: 0;
+                width: 100%;
+                padding: 14px 20px;
+                font-size: 15px;
+                letter-spacing: 1.5px;
+                border-radius: 10px;
+            }
+            .secondary-btn {
+                min-width: 0;
+                width: 100%;
+                max-width: 320px;
+                padding: 12px 18px;
+                font-size: 13.5px;
+            }
+            .menu-btn {
+                padding: 11px 12px;
+                gap: 10px;
+                margin-top: 7px;
+                border-radius: 10px;
+            }
+            .menu-btn .mb-icon {
+                width: 34px;
+                height: 34px;
+                font-size: 11px;
+                border-radius: 8px;
+            }
+            .menu-btn .mb-text strong { font-size: 13px; letter-spacing: 1px; }
+            .menu-btn .mb-text small { font-size: 10.5px; }
+            .callsign-row { margin-bottom: 10px; }
+            input[type="text"] {
+                padding: 11px 12px;
+                font-size: 15px;
+                border-radius: 9px;
+            }
+            .opt-btn {
+                padding: 10px 6px;
+                font-size: 12px;
+                border-radius: 8px;
+            }
+            .btn-group { gap: 6px; }
+            .loadout { max-width: 100%; }
+            .pickup-strip { gap: 5px; max-width: 100%; }
+            .loot-chip {
+                padding: 6px 3px;
+                font-size: 10px;
+                border-radius: 6px;
+            }
+            .loot-chip span { font-size: 8.5px; }
+            .loadout-note { font-size: 10.5px; margin-top: 5px; }
+            .credits-pill {
+                padding: 5px 12px;
+                margin-bottom: 10px;
+                font-size: 12px;
+            }
+            .lobby-fs-btn {
+                top: max(10px, env(safe-area-inset-top));
+                right: max(10px, env(safe-area-inset-right));
+            }
+            .panel-card { max-width: 100%; }
+            .setting-row { padding: 10px 0; gap: 6px; }
+            .setting-info strong { font-size: 13px; }
+            .setting-info span { font-size: 11px; }
+            .panel-section { font-size: 10px; margin: 2px 0 8px; }
+            .guide-tip { font-size: 11.5px; padding: 8px 10px; }
+            .ctrl-row { font-size: 12px; padding: 6px 0; }
+
+            /* Shop portrait */
+            .shop-shell { max-height: 72vh; }
+            .shop-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+            .shop-item { padding: 11px; border-radius: 10px; }
+            .shop-icon { width: 38px; height: 38px; border-radius: 9px; margin-bottom: 7px; }
+            .shop-item h3 { font-size: 13px; }
+            .shop-item p { font-size: 10.5px; min-height: 28px; margin-bottom: 8px; }
+            .shop-buy { padding: 10px 6px; font-size: 12px; }
+            .shop-next { min-height: 24px; font-size: 9.5px; }
+            .shop-topbar { margin-bottom: 8px; }
+            .shop-balance { font-size: 14px; }
+
+            /* Missions */
+            .mission-card { padding: 10px; border-radius: 9px; }
+            .mission-card strong { font-size: 13px; }
+            .mission-card small { font-size: 11px; }
+
+            /* Buff pills */
+            .buff-pill { padding: 2px 7px; font-size: 10.5px; }
+            #buffs-row { gap: 4px; }
+        }
+
+        /* Extra-narrow phones */
+        @media (max-width: 380px) {
+            #hud,
+            html.is-fullscreen #hud,
+            html:fullscreen #hud { padding-top: calc(max(4px, env(safe-area-inset-top)) + 22px) !important; }
+            .bar-container { width: 44px; }
+            .leaderboard { min-width: 84px; max-width: 100px; padding: 3px 5px; }
+            .lb-row { font-size: 8.5px; }
+            .stat-badge { padding: 2px 4px; font-size: 8.5px; }
+            .hud-icon-btn { width: 28px; height: 28px; min-width: 28px; min-height: 28px; font-size: 8.5px; }
+            #sprint-btn { width: 62px; height: 62px; }
+            .feature-pill { padding: 2px 4px; font-size: 7.5px; }
+            .shop-grid { grid-template-columns: 1fr; }
+            h1 { font-size: 26px; letter-spacing: 1.5px; }
+        }
+
+
+        /* ===== Android Landscape Minimal UI (wide & short viewport) ===== */
+        @media (orientation: landscape) and (max-height: 560px) {
+            /* Ultra-clean, low-profile HUD leaving center screen wide open */
+            #hud {
+                padding: 6px 10px;
+                padding-top: max(6px, env(safe-area-inset-top));
+                padding-left: max(10px, env(safe-area-inset-left));
+                padding-right: max(10px, env(safe-area-inset-right));
+            }
+            .hud-left {
+                max-width: 48%;
+                gap: 4px;
+            }
+            .hud-row {
+                font-size: 10.5px;
+                gap: 4px;
+            }
+            .bars-panel {
+                padding: 4px 7px;
+                gap: 2px;
+                border-radius: 6px;
+                background: rgba(15, 23, 42, 0.84);
+            }
+            .bar-row { font-size: 10px; gap: 4px; }
+            .bar-label { width: 22px; font-size: 9.5px; }
+            .bar-container { width: 76px; height: 6px; }
+            .bar-val { width: 22px; font-size: 10px; }
+            .stat-badge {
+                padding: 3px 6px;
+                font-size: 10.5px;
+                border-radius: 5px;
+                background: rgba(15, 23, 42, 0.84);
+            }
+            .buff-pill {
+                padding: 2px 6px;
+                font-size: 9.5px;
+                border-radius: 4px;
+            }
+            #buffs-row { gap: 4px; }
+
+            /* Compact top-center arena telemetry pills */
+            #feature-hud {
+                top: max(6px, env(safe-area-inset-top));
+                gap: 4px;
+                max-width: 34vw;
+            }
+            .feature-pill {
+                padding: 2px 6px;
+                font-size: 8.5px;
+                letter-spacing: 0.3px;
+                background: rgba(2, 6, 23, 0.84);
+            }
+            #feature-panel {
+                left: max(10px, env(safe-area-inset-left));
+                bottom: max(10px, env(safe-area-inset-bottom));
+                max-width: 210px;
+                padding: 6px 8px;
+                font-size: 10px;
+                border-radius: 8px;
+            }
+
+            /* Top-right: slim 3-row leaderboard + horizontal icon buttons */
+            .hud-right {
+                gap: 5px;
+                align-items: flex-start;
+            }
+            .hud-controls-col {
+                flex-direction: row;
+                gap: 4px;
+            }
+            .hud-icon-btn {
+                width: 34px;
+                height: 34px;
+                min-width: 34px;
+                min-height: 34px;
+                font-size: 10px;
+                border-radius: 8px;
+            }
+            .leaderboard {
+                min-width: 112px;
+                max-width: 138px;
+                padding: 4px 7px;
+                border-radius: 7px;
+                background: rgba(15, 23, 42, 0.84);
+            }
+            .lb-title {
+                font-size: 8.5px;
+                margin-bottom: 2px;
+                padding-bottom: 2px;
+            }
+            .lb-row {
+                font-size: 9.5px;
+                padding: 0.5px 0;
+            }
+            .leaderboard .lb-row:nth-child(n+4) {
+                display: none;
+            }
+
+            /* Thumb-friendly sprint button in bottom-right corner */
+            #sprint-btn {
+                width: 66px;
+                height: 66px;
+                right: max(14px, env(safe-area-inset-right));
+                bottom: max(12px, env(safe-area-inset-bottom));
+                font-size: 10px;
+            }
+            #sprint-btn small { font-size: 8px; }
+
+            /* ===== Landscape Menu & Overlay Screens (2-column / compact fit without vertical scrolling) ===== */
+            .screen {
+                padding: 8px 16px;
+                padding-top: max(8px, env(safe-area-inset-top));
+                padding-bottom: max(8px, env(safe-area-inset-bottom));
+                padding-left: max(16px, env(safe-area-inset-left));
+                padding-right: max(16px, env(safe-area-inset-right));
+                justify-content: center;
+            }
+            .credits-pill {
+                padding: 3px 11px;
+                margin-bottom: 6px;
+                font-size: 11px;
+            }
+            .lobby-fs-btn {
+                top: max(8px, env(safe-area-inset-top));
+                right: max(12px, env(safe-area-inset-right));
+            }
+            .title-emblem {
+                font-size: 9px;
+                padding: 2px 10px;
+                margin-bottom: 3px;
+                letter-spacing: 1.6px;
+            }
+            h1 {
+                font-size: clamp(22px, 4.2vw, 30px);
+                letter-spacing: 2.5px;
+                margin-bottom: 2px;
+            }
+            .title-divider {
+                max-width: 200px;
+                margin: 1px auto 4px;
+            }
+            .subtitle {
+                font-size: 11px;
+                margin-bottom: 8px;
+            }
+
+            /* Main Menu Hub: 2-column grid for navigation + compact callsign/play */
+            .menu-hub {
+                max-width: min(640px, 90vw);
+                padding: 10px 14px;
+                margin-bottom: 8px;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 6px 8px;
+                align-items: center;
+            }
+            .menu-hub .callsign-row {
+                margin-bottom: 0;
+            }
+            .menu-hub .callsign-row label {
+                font-size: 9.5px;
+                margin-bottom: 3px;
+            }
+            .menu-hub input[type="text"] {
+                padding: 7px 10px;
+                font-size: 13px;
+            }
+            .menu-hub .primary-btn {
+                margin-top: 14px;
+                padding: 9px 14px;
+                font-size: 13px;
+                min-width: 0;
+                letter-spacing: 1.4px;
+            }
+            .menu-hub .menu-btn {
+                margin-top: 0;
+                padding: 7px 10px;
+                gap: 8px;
+                border-radius: 8px;
+            }
+            .menu-hub .menu-btn .mb-icon {
+                width: 28px;
+                height: 28px;
+                font-size: 10px;
+                border-radius: 6px;
+            }
+            .menu-hub .menu-btn .mb-text strong {
+                font-size: 11.5px;
+                letter-spacing: 0.8px;
+            }
+            .menu-hub .menu-btn .mb-text small {
+                font-size: 9.5px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            /* Compact horizontal Starting Power strip */
+            .loadout {
+                max-width: min(640px, 90vw);
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .loadout .panel-section {
+                margin: 0;
+                font-size: 9.5px;
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
+            .loadout .panel-section::before,
+            .loadout .panel-section::after {
+                display: none;
+            }
+            .pickup-strip {
+                max-width: none;
+                margin-bottom: 0;
+                gap: 5px;
+            }
+            .loot-chip {
+                padding: 4px 6px;
+                font-size: 9.5px;
+                flex-direction: row;
+                justify-content: center;
+                gap: 4px;
+            }
+            .loot-chip span {
+                font-size: 8.5px;
+            }
+            .loadout-note {
+                display: none;
+            }
+
+            /* Sub-screens (Settings, Controls, Shop, Missions, Pause, End) */
+            .panel-card {
+                max-width: min(720px, 92vw);
+                padding: 12px 16px;
+                margin-bottom: 8px;
+            }
+            .panel-section {
+                font-size: 9.5px;
+                margin: 2px 0 6px;
+            }
+            .setting-row {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                padding: 6px 0;
+                gap: 12px;
+            }
+            .setting-info strong { font-size: 12px; }
+            .setting-info span { font-size: 10px; }
+            .setting-row .btn-group { width: 240px; flex-shrink: 0; }
+            .opt-btn { padding: 5px 4px; font-size: 11px; }
+            .guide-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+            .ctrl-row { padding: 4px 0; font-size: 11px; }
+            .guide-tip { margin-top: 6px; padding: 6px 10px; font-size: 10.5px; }
+            .back-btn { padding: 9px 28px; font-size: 13px; min-width: 180px; }
+
+            /* Shop & Missions in landscape */
+            .shop-shell { max-height: 68vh; }
+            .shop-topbar { margin-bottom: 6px; }
+            .shop-balance { font-size: 13px; }
+            .shop-grid { grid-template-columns: repeat(3, 1fr); gap: 7px; }
+            .shop-item { padding: 9px 10px; border-radius: 9px; }
+            .shop-icon { width: 28px; height: 28px; font-size: 10px; margin-bottom: 5px; border-radius: 7px; }
+            .shop-item h3 { font-size: 12px; margin-bottom: 2px; }
+            .shop-item p { font-size: 10px; min-height: 24px; margin-bottom: 6px; line-height: 1.3; }
+            .shop-next { font-size: 9px; min-height: 20px; margin-bottom: 5px; }
+            .shop-buy { padding: 6px 5px; font-size: 10.5px; }
+
+            #mission-screen .mission-list {
+                grid-template-columns: 1fr 1fr;
+                gap: 7px;
+                margin: 6px 0;
+            }
+            .mission-card { padding: 8px 10px; }
+            .mission-card strong { font-size: 11.5px; }
+            .mission-card small { font-size: 10px; }
+
+            /* Pause & Game Over cards in landscape */
+            #pause-screen .menu-card,
+            #end-screen .menu-card {
+                padding: 10px 18px;
+                margin-bottom: 8px;
+                max-width: 380px;
+            }
+            #pause-screen .secondary-btn,
+            #end-screen .secondary-btn,
+            #pause-screen .primary-btn,
+            #end-screen .primary-btn {
+                padding: 8px 20px;
+                font-size: 12.5px;
+                margin-top: 5px;
+                min-width: 190px;
+            }
         }
 
         /* =====================================================
@@ -992,11 +1579,11 @@
 
     
 /* ===== COMPLETE FEATURES: boss waves, missions, bounty, streaks, risk zones, rare loot ===== */
-#feature-hud{position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:8;display:flex;gap:7px;flex-wrap:wrap;justify-content:center;max-width:min(760px,90vw);pointer-events:none}
-.feature-pill{background:rgba(2,6,23,.9);border:1px solid #334155;border-radius:999px;padding:6px 10px;color:#cbd5e1;font:800 10px/1.1 system-ui;letter-spacing:.7px;box-shadow:0 0 12px rgba(56,189,248,.12)}
+#feature-hud{position:fixed;left:50%;top:max(6px,env(safe-area-inset-top));transform:translateX(-50%);z-index:7;display:flex;gap:4px;flex-wrap:wrap;justify-content:center;max-width:min(320px,58vw);pointer-events:none}
+.feature-pill{background:rgba(2,6,23,.92);border:1px solid #334155;border-radius:999px;padding:3px 7px;color:#cbd5e1;font:800 9px/1.15 system-ui;letter-spacing:.4px;box-shadow:0 0 8px rgba(56,189,248,.1);white-space:nowrap}
 .feature-pill b{color:#fbbf24}.feature-pill.boss{border-color:#f43f5e;color:#fecdd3}.feature-pill.risk{border-color:#a855f7;color:#e9d5ff}.feature-pill.streak{border-color:#f97316;color:#fed7aa}
-#feature-panel{position:fixed;left:14px;bottom:14px;z-index:9;max-width:280px;background:rgba(2,6,23,.93);border:1px solid #334155;border-radius:12px;padding:11px 13px;color:#cbd5e1;font:600 11px/1.5 system-ui;pointer-events:none;box-shadow:0 10px 30px rgba(0,0,0,.35)}
-#feature-panel strong{display:block;color:#7dd3fc;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:4px}
+#feature-panel{position:fixed;left:max(10px,env(safe-area-inset-left));bottom:max(14px,env(safe-area-inset-bottom));z-index:9;max-width:240px;background:rgba(2,6,23,.93);border:1px solid #334155;border-radius:10px;padding:8px 10px;color:#cbd5e1;font:600 10.5px/1.4 system-ui;pointer-events:none;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+#feature-panel strong{display:block;color:#7dd3fc;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px}
 #mission-screen .mission-list{display:grid;gap:10px;margin:12px 0}.mission-card{padding:12px;border:1px solid #334155;border-radius:10px;background:rgba(9,14,26,.8);text-align:left}.mission-card.done{border-color:#4ade80}.mission-card strong{display:block;color:#e2e8f0}.mission-card small{color:#94a3b8}.mission-progress{height:5px;background:#111827;border-radius:99px;overflow:hidden;margin-top:8px}.mission-progress span{display:block;height:100%;background:linear-gradient(90deg,#38bdf8,#a78bfa,#fbbf24)}
 
 /* ===== VOLCAN STUDIO LOADING SCREEN ===== */
@@ -1095,6 +1682,47 @@
     mask-image: radial-gradient(circle at 50% 45%, #000 20%, transparent 70%);
     animation: gridScroll 6s linear infinite;
 }
+
+        /* Fullscreen: canvas stays edge-to-edge behind notch, while UI blocks respect safe-area insets */
+        html.is-fullscreen #hud,
+        html:fullscreen #hud,
+        html:-webkit-full-screen #hud {
+            padding-top: max(10px, env(safe-area-inset-top));
+            padding-left: max(12px, env(safe-area-inset-left));
+            padding-right: max(12px, env(safe-area-inset-right));
+            padding-bottom: max(10px, env(safe-area-inset-bottom));
+        }
+        html.is-fullscreen #feature-hud,
+        html:fullscreen #feature-hud,
+        html:-webkit-full-screen #feature-hud {
+            top: max(6px, env(safe-area-inset-top));
+        }
+        html.is-fullscreen #feature-panel,
+        html:fullscreen #feature-panel,
+        html:-webkit-full-screen #feature-panel {
+            left: max(10px, env(safe-area-inset-left));
+            bottom: max(14px, env(safe-area-inset-bottom));
+        }
+        html.is-fullscreen #sprint-btn,
+        html:fullscreen #sprint-btn,
+        html:-webkit-full-screen #sprint-btn {
+            right: max(16px, env(safe-area-inset-right));
+            bottom: max(18px, env(safe-area-inset-bottom));
+        }
+        html.is-fullscreen .lobby-fs-btn,
+        html:fullscreen .lobby-fs-btn,
+        html:-webkit-full-screen .lobby-fs-btn {
+            top: max(12px, env(safe-area-inset-top));
+            right: max(14px, env(safe-area-inset-right));
+        }
+        html.is-fullscreen .screen,
+        html:fullscreen .screen,
+        html:-webkit-full-screen .screen {
+            padding-top: max(12px, env(safe-area-inset-top));
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
+            padding-left: max(14px, env(safe-area-inset-left));
+            padding-right: max(14px, env(safe-area-inset-right));
+        }
 </style>
 </head>
 <body>
@@ -1143,10 +1771,10 @@
 <canvas id="arenaCanvas"></canvas>
 
 <div id="feature-hud" class="hidden">
-  <div class="feature-pill boss" id="boss-pill">BOSS: <b id="boss-status">NEXT WAVE</b></div>
-  <div class="feature-pill streak" id="streak-pill">STREAK: <b id="streak-status">0</b></div>
-  <div class="feature-pill risk" id="risk-pill">RISK ZONE: <b id="risk-status">OFFLINE</b></div>
-  <div class="feature-pill" id="bounty-pill">BOUNTY: <b id="bounty-status">500</b></div>
+  <div class="feature-pill boss" id="boss-pill" title="Boss Wave"><svg class="hud-ico" viewBox="0 0 16 16"><path fill="currentColor" d="M8 1a5 5 0 0 0-5 5v2.5L2 10v2h3v2h2v-2h2v2h2v-2h3v-2l-1-1.5V6a5 5 0 0 0-5-5zm-2 5.5a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4zm4 0a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4z"/></svg><b id="boss-status">—</b></div>
+  <div class="feature-pill streak" id="streak-pill" title="Kill Streak"><svg class="hud-ico" viewBox="0 0 16 16"><path fill="currentColor" d="M8.5 1C8.5 1 12 4.2 12 8a4 4 0 0 1-8 0c0-1.5.7-3 1.7-4.1-.1 1.1.4 2 1.1 2.4C6.5 4.5 7.5 2.4 8.5 1z"/></svg><b id="streak-status">0</b></div>
+  <div class="feature-pill risk" id="risk-pill" title="Risk Zone"><svg class="hud-ico" viewBox="0 0 16 16"><path fill="currentColor" d="M8 1.5 1 14h14L8 1.5zm-.8 4.5h1.6v4.2H7.2V6zm0 5.3h1.6v1.5H7.2v-1.5z"/></svg><b id="risk-status">OFF</b></div>
+  <div class="feature-pill" id="bounty-pill" title="King Bounty"><svg class="hud-ico" viewBox="0 0 16 16"><path fill="currentColor" d="M2 12h12l-1.2-6.5-3.2 2.8L8 4 6.4 8.3 3.2 5.5 2 12zm0 1.5h12V15H2v-1.5z"/></svg><b id="bounty-status">500</b></div>
 </div>
 <div id="feature-panel" class="hidden"><strong id="feature-title">ARENA SYSTEMS</strong><span id="feature-message">Systems online.</span></div>
 
@@ -1159,7 +1787,7 @@
         <div class="hud-row">
             <div class="bars-panel" id="bars-panel">
                 <div class="bar-row">
-                    <span class="bar-label">HP</span>
+                    <span class="bar-label" title="Health"><svg class="hud-ico success" viewBox="0 0 16 16"><path fill="currentColor" d="M6.2 2h3.6v4.2H14v3.6H9.8V14H6.2V9.8H2V6.2h4.2V2z"/></svg></span>
                     <div class="bar-container">
                         <div id="hp-ghost"></div>
                         <div id="hp-bar"></div>
@@ -1167,50 +1795,48 @@
                     <span id="hp-text" class="bar-val">100</span>
                 </div>
                 <div class="bar-row">
-                    <span class="bar-label">STM</span>
+                    <span class="bar-label" title="Stamina"><svg class="hud-ico accent" viewBox="0 0 16 16"><path fill="currentColor" d="M9.5 1 3 9h4.5L6.5 15 13 7H8.5L9.5 1z"/></svg></span>
                     <div class="bar-container">
                         <div id="stamina-bar"></div>
                     </div>
                     <span id="stamina-text" class="bar-val accent">100</span>
                 </div>
             </div>
-            <div class="stat-badge">TARGET: <span id="target-hud" class="muted">SCANNING</span></div>
+            <div class="stat-badge" title="Target Lock"><svg class="hud-ico danger" viewBox="0 0 16 16"><path fill="currentColor" d="M7.2 1h1.6v2.1a5 5 0 0 1 4.1 4.1H15v1.6h-2.1a5 5 0 0 1-4.1 4.1V15H7.2v-2.1a5 5 0 0 1-4.1-4.1H1V7.2h2.1a5 5 0 0 1 4.1-4.1V1zm.8 3.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8zm0 2.1a1.3 1.3 0 1 1 0 2.6 1.3 1.3 0 0 1 0-2.6z"/></svg><span id="target-hud" class="muted">—</span></div>
         </div>
-        <div class="hud-row">
-            <div class="stat-badge">SCORE: <span id="score-count" class="gold pop-target">0</span></div>
-            <div class="stat-badge">KILLS: <span id="kills-count" class="accent pop-target">0</span></div>
-            <div class="stat-badge">BOTS: <span id="bots-active" class="danger pop-target">0</span></div>
-            <div class="stat-badge">CREDITS: <span id="credits-count" class="gold pop-target">0</span></div>
-            <div class="stat-badge">FPS: <span id="fps-hud" class="success">60</span></div>
+        <div class="hud-row hud-stats">
+            <div class="stat-badge" title="Score"><svg class="hud-ico gold" viewBox="0 0 16 16"><path fill="currentColor" d="m8 1.3 2.1 4.3 4.7.7-3.4 3.3.8 4.7L8 12.1l-4.2 2.2.8-4.7-3.4-3.3 4.7-.7L8 1.3z"/></svg><span id="score-count" class="gold pop-target">0</span></div>
+            <div class="stat-badge" title="Kills"><svg class="hud-ico accent" viewBox="0 0 16 16"><path fill="currentColor" d="M13.5 1.5 9.2 5.8 7.5 4.1 6.3 5.3l1.3 1.3-5.1 5.1V14h2.3l5.1-5.1 1.3 1.3 1.2-1.2-1.7-1.7 4.3-4.3V1.5h-1.5z"/></svg><span id="kills-count" class="accent pop-target">0</span></div>
+            <div class="stat-badge hide-sm" title="Bots"><svg class="hud-ico danger" viewBox="0 0 16 16"><path fill="currentColor" d="M7.2 1h1.6v1.5h2.7A2.5 2.5 0 0 1 14 5v5a2.5 2.5 0 0 1-2.5 2.5h-7A2.5 2.5 0 0 1 2 10V5a2.5 2.5 0 0 1 2.5-2.5h2.7V1zM5.5 6.5a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4zm5 0a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"/></svg><span id="bots-active" class="danger pop-target">0</span></div>
+            <div class="stat-badge" title="Credits"><svg class="hud-ico gold" viewBox="0 0 16 16"><path fill="currentColor" d="M8 1.5 14 8l-6 6.5L2 8l6-6.5zm0 2.8L4.6 8 8 11.7 11.4 8 8 4.3z"/></svg><span id="credits-count" class="gold pop-target">0</span></div>
+            <div class="stat-badge hide-sm" title="FPS"><svg class="hud-ico success" viewBox="0 0 16 16"><path fill="currentColor" d="M2 12a6 6 0 1 1 12 0h-1.8a4.2 4.2 0 1 0-8.4 0H2zm6-4.5 2.8-2.2 1 1.2L8.9 9a1.3 1.3 0 1 1-.9-1.5z"/></svg><span id="fps-hud" class="success">60</span></div>
         </div>
         <div id="buffs-row"></div>
     </div>
 
     <div class="hud-right">
         <div class="leaderboard">
-            <div class="lb-title">Top Fighters</div>
+            <div class="lb-title"><svg class="hud-ico gold" viewBox="0 0 16 16"><path fill="currentColor" d="M3 2h10v3a5 5 0 0 1-4 4.9V12h3v2H4v-2h3V9.9A5 5 0 0 1 3 5V2z"/></svg></div>
             <div id="lb-list"></div>
         </div>
         <div class="hud-controls-col">
-            <button id="pause-btn" class="hud-icon-btn" type="button" title="Pause (Esc / P)">II</button>
-            <button id="mute-btn" class="hud-icon-btn" type="button" title="Toggle Sound (M)">SFX</button>
-            <button id="hud-fs-btn" class="hud-icon-btn" type="button" title="Toggle Fullscreen (G)">FS</button>
+            <button id="pause-btn" class="hud-icon-btn" type="button" title="Pause (Esc / P)"><svg class="btn-ico" viewBox="0 0 16 16"><path fill="currentColor" d="M4 2.5h3v11H4v-11zm5 0h3v11H9v-11z"/></svg></button>
+            <button id="mute-btn" class="hud-icon-btn" type="button" title="Toggle Sound (M)"><svg class="btn-ico" viewBox="0 0 16 16"><path fill="currentColor" d="M2 5.5h3.2L9 2.2v11.6L5.2 10.5H2v-5zm9.5-.8a4.5 4.5 0 0 1 0 6.6l-1.1-1.1a3 3 0 0 0 0-4.4l1.1-1.1z"/></svg></button>
+            <button id="hud-fs-btn" class="hud-icon-btn" type="button" title="Toggle Fullscreen (G)"><svg class="btn-ico" viewBox="0 0 16 16"><path fill="currentColor" d="M2 2h4.5v1.8H3.8v2.7H2V2zm7.5 0H14v4.5h-1.8V3.8H9.5V2zM2 9.5h1.8v2.7h2.7V14H2V9.5zm10.2 2.7V9.5H14V14H9.5v-1.8h2.7z"/></svg></button>
         </div>
     </div>
 </div>
 
 <!-- Touch Controls Overlay -->
 <div id="touch-controls" class="hidden">
-    <button id="sprint-btn" type="button">
-        <span>SPRINT</span>
-        <small>HOLD</small>
+    <button id="sprint-btn" type="button" title="Sprint">
+        <svg class="sprint-ico" viewBox="0 0 24 24"><path fill="currentColor" d="M13.5 2 5 13.5h6.5L9.5 22 19 10.5h-6.5L13.5 2z"/></svg>
     </button>
 </div>
 
 <!-- Decorative Main Menu Screen -->
 <div id="main-menu" class="screen hidden">
-    <button id="lobby-fs-btn" class="hud-icon-btn lobby-fs-btn" type="button" title="Toggle Fullscreen (G)">FS</button>
-    <div class="credits-pill"><span class="coin"></span><span id="menu-credits">0</span><small>CREDITS</small></div>
+    <button id="lobby-fs-btn" class="hud-icon-btn lobby-fs-btn" type="button" title="Toggle Fullscreen (G)"><svg class="btn-ico" viewBox="0 0 16 16"><path fill="currentColor" d="M2 2h4.5v1.8H3.8v2.7H2V2zm7.5 0H14v4.5h-1.8V3.8H9.5V2zM2 9.5h1.8v2.7h2.7V14H2V9.5zm10.2 2.7V9.5H14V14H9.5v-1.8h2.7z"/></svg></button>
     <div class="title-emblem">
         <span class="emblem-dot"></span>
         <span>Neon Combat Simulation</span>
@@ -1222,6 +1848,7 @@
         <span class="line"></span>
     </div>
     <p class="subtitle">Endless Circular Bot Battle Royale</p>
+    <div class="credits-pill"><span class="coin"></span><span id="menu-credits">0</span><small>CREDITS</small></div>
 
     <div class="menu-card menu-hub">
         <div class="card-corners"></div>
@@ -1310,9 +1937,9 @@
         <div class="setting-row">
             <div class="setting-info"><strong>Performance Mode</strong><span>Lower = faster on older devices</span></div>
             <div class="btn-group" id="quality-group">
-                <button class="opt-btn active" data-val="potato">Ultra Fast</button>
+                <button class="opt-btn" data-val="potato">Ultra Fast</button>
                 <button class="opt-btn" data-val="balanced">Balanced</button>
-                <button class="opt-btn" data-val="high">High Detail</button>
+                <button class="opt-btn active" data-val="high">High Detail</button>
             </div>
         </div>
         <div class="panel-section" style="margin-top:12px">Audio</div>
@@ -1411,7 +2038,6 @@ const SoundFX = {
     lastWallHitTime: 0,
 
     init() {
-        if (!this.enabled) return;
         if (!this.ctx) {
             const AudioCtx = window.AudioContext || window.webkitAudioContext;
             if (!AudioCtx) return;
@@ -1477,22 +2103,25 @@ const SoundFX = {
 
     shootPlayer(isTriple, isRapid) {
         if (isTriple) {
-            this.playTone('sawtooth', 620, 180, 0.09, 0.075);
-            this.playTone('triangle', 880, 260, 0.07, 0.05);
+            this.playNoise(0.065, 2200, 0.075, 'bandpass');
+            this.playTone('sawtooth', 520, 95, 0.075, 0.065);
         } else if (isRapid) {
-            this.playTone('square', 780, 240, 0.065, 0.065);
+            this.playNoise(0.045, 2600, 0.06, 'bandpass');
+            this.playTone('sawtooth', 640, 110, 0.055, 0.055);
         } else {
-            this.playTone('triangle', 680, 190, 0.08, 0.08);
+            this.playNoise(0.055, 2000, 0.07, 'bandpass');
+            this.playTone('sawtooth', 560, 95, 0.065, 0.065);
         }
     },
 
     shootBot(distSq) {
         if (!this.enabled || !this.ctx) return;
         const now = this.ctx.currentTime;
-        if (now - this.lastBotShotTime < 0.06) return; // Rate-limit distant bot audio
+        if (now - this.lastBotShotTime < 0.075) return; // Rate-limit distant bot audio
         this.lastBotShotTime = now;
-        const atten = Math.max(0.15, 1 - Math.sqrt(distSq) / 700);
-        this.playTone('triangle', 460, 150, 0.065, 0.04 * atten);
+        const atten = Math.max(0.12, 1 - Math.sqrt(distSq) / 700);
+        this.playNoise(0.045, 1600, 0.035 * atten, 'bandpass');
+        this.playTone('sawtooth', 380, 90, 0.055, 0.03 * atten);
     },
 
     hitTarget() {
@@ -1559,7 +2188,9 @@ const SoundFX = {
 // UI & CANVAS SETUP
 // ============================================================================
 const canvas = document.getElementById('arenaCanvas');
-const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+// desynchronized:false keeps the canvas buffer synced to the display refresh (true V-Sync).
+// desynchronized:true reduces latency but commonly causes screen tearing on Android/Chrome.
+const ctx = canvas.getContext('2d', { alpha: false, desynchronized: false });
 
 const mainMenu = document.getElementById('main-menu');
 const pauseScreen = document.getElementById('pause-screen');
@@ -1744,21 +2375,35 @@ function countUp(el, to, duration = 900) {
     requestAnimationFrame(step);
 }
 
-const ARENA_RADIUS = 1350;
+const ARENA_RADIUS = 2000;   // was 1350 (~2.2x the play area)
+
+// Everything that depends on how much room there is is derived from the arena's area,
+// so changing ARENA_RADIUS later automatically rebalances populations.
+const ARENA_AREA_M = Math.PI * ARENA_RADIUS * ARENA_RADIUS / 1e6;            // area in millions of px^2
+const BOT_DENSITY  = { potato: 1.3, balanced: 1.6, high: 2.0 };              // bots per million px^2
+const botPopFor    = q => Math.max(8, Math.round(ARENA_AREA_M * BOT_DENSITY[q]));
+const CRATE_CAP    = Math.round(ARENA_AREA_M * 2.5);                         // crates alive at once
+const RISK_ZONE_R  = Math.round(190 * Math.sqrt(ARENA_RADIUS / 1350));       // risk zone grows with the map
+const SPAWN_MIN_PLAYER_DIST_SQ = 600 * 600;                                  // keep fresh spawns off the player
 const PLAYER_LOCK_RANGE = 540;
 const PLAYER_LOCK_RANGE_SQ = PLAYER_LOCK_RANGE * PLAYER_LOCK_RANGE;
 
 let settings = {
     name: 'Player',
     difficulty: 'medium',
-    quality: 'potato',
+    quality: 'high',
     sound: true,
     music: true
 };
 
+const ICON_SFX_ON = '<svg class="btn-ico" viewBox="0 0 16 16"><path fill="currentColor" d="M2 5.5h3.2L9 2.2v11.6L5.2 10.5H2v-5zm9.5-.8a4.5 4.5 0 0 1 0 6.6l-1.1-1.1a3 3 0 0 0 0-4.4l1.1-1.1z"/></svg>';
+const ICON_SFX_OFF = '<svg class="btn-ico" viewBox="0 0 16 16"><path fill="currentColor" d="M2 5.5h3.2L9 2.2v11.6L5.2 10.5H2v-5zm9.2.6 1.4 1.4 1.4-1.4 1.1 1.1-1.4 1.4 1.4 1.4-1.1 1.1-1.4-1.4-1.4 1.4-1.1-1.1 1.4-1.4-1.4-1.4 1.1-1.1z"/></svg>';
+const ICON_FS_ENTER = '<svg class="btn-ico" viewBox="0 0 16 16"><path fill="currentColor" d="M2 2h4.5v1.8H3.8v2.7H2V2zm7.5 0H14v4.5h-1.8V3.8H9.5V2zM2 9.5h1.8v2.7h2.7V14H2V9.5zm10.2 2.7V9.5H14V14H9.5v-1.8h2.7z"/></svg>';
+const ICON_FS_EXIT = '<svg class="btn-ico" viewBox="0 0 16 16"><path fill="currentColor" d="M5.2 2H7v5H2V5.2h3.2V2zm3.8 0h1.8v3.2H14V7H9V2zM2 9h5v5H5.2v-3.2H2V9zm7 0h5v1.8h-3.2V14H9V9z"/></svg>';
+
 function syncSoundUI() {
     SoundFX.enabled = settings.sound;
-    muteBtn.textContent = settings.sound ? 'SFX' : 'OFF';
+    muteBtn.innerHTML = settings.sound ? ICON_SFX_ON : ICON_SFX_OFF;
     muteBtn.classList.toggle('muted-state', !settings.sound);
     pauseSoundBtn.textContent = settings.sound ? 'Sound: ON' : 'Sound: OFF';
 
@@ -2077,57 +2722,41 @@ const BackgroundMusic = {
         const barNum = Math.floor(step / 16);
         const barIdx = barNum % cfg.bars.length;
         const bar = cfg.bars[barIdx];
-        const combat = Boolean(lockedTarget);
         const barDur = sd * 16;
 
         // Four-on-the-floor kick
-        if (s % 4 === 0) this.kick(t, 0.3);
+        if (s % 4 === 0) this.kick(t, 0.28);
         // Snare/clap on 2 and 4
         if (s === 4 || s === 12) {
-            this.noise(t, 0.14, 0.1, 1400, { type: 'bandpass', q: 0.7, send: 0.15 });
-            this.voice('triangle', 190, t, 0.08, 0.06);
+            this.noise(t, 0.14, 0.09, 1400, { type: 'bandpass', q: 0.7, send: 0.15 });
+            this.voice('triangle', 190, t, 0.08, 0.05);
         }
-        // Hi-hats: 8ths always, 16ths in combat
-        if (s % 2 === 0) this.noise(t, 0.04, s % 4 === 2 ? 0.035 : 0.02, 8000);
-        else if (combat) this.noise(t, 0.03, 0.014, 9000);
+        // Hi-hats on 8th notes
+        if (s % 2 === 0) this.noise(t, 0.04, s % 4 === 2 ? 0.032 : 0.018, 8000);
         // Open hat on the offbeat
-        if (s === 14) this.noise(t, 0.12, 0.025, 6500);
+        if (s === 14) this.noise(t, 0.12, 0.022, 6500);
 
         // Pulsing sawtooth bass with filter envelope
         if (cfg.bassPattern[s]) {
             const f = this.mtof(bar.root + cfg.bassOct[s]);
-            this.voice('sawtooth', f, t, sd * 1.6, 0.11, { cutoff: 900, cutoffEnd: 180, q: 4 });
-            this.voice('sine', this.mtof(bar.root), t, sd * 1.6, 0.1);
+            this.voice('sawtooth', f, t, sd * 1.6, 0.095, { cutoff: 820, cutoffEnd: 170, q: 3.5 });
+            this.voice('sine', this.mtof(bar.root), t, sd * 1.6, 0.09);
         }
 
         // Sustained pad stab each bar
         if (s === 0) {
             bar.chord.forEach(n => {
                 const f = this.mtof(n - 12);
-                this.voice('sawtooth', f, t, barDur * 0.95, 0.014, { detune: -7, cutoff: 1200, attack: 0.15 });
-                this.voice('sawtooth', f, t, barDur * 0.95, 0.014, { detune: 7, cutoff: 1200, attack: 0.15 });
+                this.voice('sawtooth', f, t, barDur * 0.95, 0.013, { detune: -7, cutoff: 1150, attack: 0.15 });
+                this.voice('sawtooth', f, t, barDur * 0.95, 0.013, { detune: 7, cutoff: 1150, attack: 0.15 });
             });
         }
 
-        // 16th arpeggio pluck (square, filtered, with echo)
-        {
-            const ci = cfg.arpPattern[s % cfg.arpPattern.length];
-            const note = bar.chord[ci % 3] + (combat ? 12 : 0);
-            this.voice('square', this.mtof(note), t, sd * 1.4, combat ? 0.03 : 0.02, { cutoff: 2600, cutoffEnd: 700, send: 0.25 });
-        }
-
-        // Combat lead melody + riser fill
-        if (combat) {
-            for (const m of cfg.leadPattern) {
-                if (m[0] === s) {
-                    const note = bar.chord[m[1]] + m[2];
-                    this.voice('sawtooth', this.mtof(note), t, sd * 2.5, 0.045, { cutoff: 3500, cutoffEnd: 1200, send: 0.45, detune: 6 });
-                    this.voice('sawtooth', this.mtof(note), t, sd * 2.5, 0.045, { cutoff: 3500, cutoffEnd: 1200, detune: -6 });
-                }
-            }
-            if (barIdx % 4 === 3 && s >= 12) {
-                this.noise(t, 0.1, 0.05 + (s - 12) * 0.02, 2000, { type: 'bandpass', q: 0.6 });
-            }
+        // Subtle 8th-note background pulse (keeps steady groove without spiking when firing)
+        if (s % 2 === 0) {
+            const ci = cfg.arpPattern[(s >> 1) % cfg.arpPattern.length];
+            const note = bar.chord[ci % 3];
+            this.voice('triangle', this.mtof(note), t, sd * 1.6, 0.018, { cutoff: 1800, cutoffEnd: 650, send: 0.22 });
         }
     }
 };
@@ -2144,10 +2773,13 @@ function isFullscreenActive() {
 
 function syncFullscreenUI() {
     const active = isFullscreenActive();
-    hudFsBtn.textContent = active ? 'EXIT' : 'FS';
-    lobbyFsBtn.textContent = active ? 'EXIT' : 'FS';
+    document.documentElement.classList.toggle('is-fullscreen', active);
+    hudFsBtn.innerHTML = active ? ICON_FS_EXIT : ICON_FS_ENTER;
+    lobbyFsBtn.innerHTML = active ? ICON_FS_EXIT : ICON_FS_ENTER;
     hudFsBtn.classList.toggle('active-state', active);
     lobbyFsBtn.classList.toggle('active-state', active);
+    resizeCanvas();
+    setTimeout(resizeCanvas, 120);
 }
 
 function toggleFullscreen() {
@@ -2156,7 +2788,8 @@ function toggleFullscreen() {
         const el = document.documentElement;
         const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
         if (req) {
-            Promise.resolve(req.call(el)).catch(() => {});
+            Promise.resolve(req.call(el, { navigationUI: 'hide' }))
+                .catch(() => Promise.resolve(req.call(el)).catch(() => {}));
         }
     } else {
         const exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
@@ -2180,9 +2813,9 @@ function toggleSound() {
 }
 
 const QUALITY_CONFIG = {
-    potato:   { dprCap: 0.72, botPop: 10, maxParticles: 24,  grid: false, highDetail: false },
-    balanced: { dprCap: 1.00, botPop: 12, maxParticles: 60,  grid: true,  highDetail: false },
-    high:     { dprCap: 2.00, botPop: 15, maxParticles: 140, grid: true,  highDetail: true  }
+    potato:   { dprCap: 0.72, botPop: botPopFor('potato'), maxParticles: 24,  grid: false, highDetail: false },
+    balanced: { dprCap: 1.00, botPop: botPopFor('balanced'), maxParticles: 60,  grid: true,  highDetail: false },
+    high:     { dprCap: 2.00, botPop: botPopFor('high'), maxParticles: 140, grid: true,  highDetail: true  }
 };
 
 let viewW = window.innerWidth;
@@ -2192,45 +2825,74 @@ let halfH = viewH * 0.5;
 let effectiveScale = 1;
 
 function resizeCanvas() {
-    viewW = window.innerWidth;
-    viewH = window.innerHeight;
+    const rect = canvas.getBoundingClientRect();
+    viewW = Math.max(window.innerWidth, Math.round(rect.width || 0));
+    viewH = Math.max(window.innerHeight, Math.round(rect.height || 0));
     halfW = viewW * 0.5;
     halfH = viewH * 0.5;
 
     const qCfg = QUALITY_CONFIG[settings.quality];
     const deviceDpr = window.devicePixelRatio || 1;
-    effectiveScale = settings.quality === 'potato'
+    // Prefer whole/half pixel scales for cleaner buffer ↔ screen mapping (less tearing/blur)
+    let scale = settings.quality === 'potato'
         ? qCfg.dprCap
         : Math.min(deviceDpr, qCfg.dprCap);
+    if (scale > 1.25 && scale < 1.75) scale = 1.5;
+    else if (scale >= 1.75) scale = Math.min(2, Math.round(scale));
+    else scale = 1;
+    effectiveScale = scale;
 
-    canvas.width = Math.floor(viewW * effectiveScale);
-    canvas.height = Math.floor(viewH * effectiveScale);
+    canvas.width = Math.max(1, Math.floor(viewW * effectiveScale));
+    canvas.height = Math.max(1, Math.floor(viewH * effectiveScale));
+    // Reset then apply scale so the drawing buffer stays aligned with rAF / display refresh
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.setTransform(effectiveScale, 0, 0, effectiveScale, 0, 0);
-    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingEnabled = effectiveScale !== 1;
 }
 
 // Pre-rendered Offscreen Pattern for Arena Floor
 const gridPatternCanvas = document.createElement('canvas');
-gridPatternCanvas.width = 120;
-gridPatternCanvas.height = 120;
+gridPatternCanvas.width = 160;
+gridPatternCanvas.height = 160;
 const gpCtx = gridPatternCanvas.getContext('2d');
-gpCtx.fillStyle = '#111827';
-gpCtx.fillRect(0, 0, 120, 120);
-const tileGrad = gpCtx.createRadialGradient(60, 60, 4, 60, 60, 60);
-tileGrad.addColorStop(0, 'rgba(56, 189, 248, 0.055)');
+gpCtx.fillStyle = '#0c1322';
+gpCtx.fillRect(0, 0, 160, 160);
+const tileGrad = gpCtx.createRadialGradient(80, 80, 6, 80, 80, 85);
+tileGrad.addColorStop(0, 'rgba(56, 189, 248, 0.075)');
+tileGrad.addColorStop(0.6, 'rgba(30, 41, 59, 0.25)');
 tileGrad.addColorStop(1, 'rgba(15, 23, 42, 0)');
 gpCtx.fillStyle = tileGrad;
-gpCtx.fillRect(0, 0, 120, 120);
+gpCtx.fillRect(0, 0, 160, 160);
+
+// Fine sub-grid
+gpCtx.strokeStyle = 'rgba(30, 41, 59, 0.45)';
+gpCtx.lineWidth = 1;
+gpCtx.beginPath();
+gpCtx.moveTo(40, 0); gpCtx.lineTo(40, 160);
+gpCtx.moveTo(120, 0); gpCtx.lineTo(120, 160);
+gpCtx.moveTo(0, 40); gpCtx.lineTo(160, 40);
+gpCtx.moveTo(0, 120); gpCtx.lineTo(160, 120);
+gpCtx.stroke();
+
+// Primary tactical grid
 gpCtx.strokeStyle = '#1e293b';
 gpCtx.lineWidth = 1.5;
 gpCtx.beginPath();
-gpCtx.moveTo(60, 0); gpCtx.lineTo(60, 120);
-gpCtx.moveTo(0, 60); gpCtx.lineTo(120, 60);
-gpCtx.moveTo(120, 0); gpCtx.lineTo(120, 120);
-gpCtx.moveTo(0, 120); gpCtx.lineTo(120, 120);
+gpCtx.moveTo(80, 0); gpCtx.lineTo(80, 160);
+gpCtx.moveTo(0, 80); gpCtx.lineTo(160, 80);
+gpCtx.moveTo(160, 0); gpCtx.lineTo(160, 160);
+gpCtx.moveTo(0, 160); gpCtx.lineTo(160, 160);
 gpCtx.stroke();
-gpCtx.fillStyle = 'rgba(56, 189, 248, 0.22)';
-gpCtx.fillRect(58.5, 58.5, 3, 3);
+
+// Glowing intersection crosshairs & nodes
+gpCtx.fillStyle = 'rgba(56, 189, 248, 0.34)';
+gpCtx.fillRect(78.5, 78.5, 3, 3);
+gpCtx.fillRect(158.5, 158.5, 3, 3);
+gpCtx.fillStyle = 'rgba(129, 140, 248, 0.22)';
+gpCtx.fillRect(79, 74, 2, 3);
+gpCtx.fillRect(79, 83, 2, 3);
+gpCtx.fillRect(74, 79, 3, 2);
+gpCtx.fillRect(83, 79, 3, 2);
 const cachedGridPattern = ctx.createPattern(gridPatternCanvas, 'repeat');
 
 // Pre-render Soft Ambient Light Glows
@@ -2299,24 +2961,43 @@ function getObstacleSprite(r) {
     octx.fill();
 
     octx.lineWidth = 3.5;
-    octx.strokeStyle = '#475569';
+    octx.strokeStyle = '#64748b';
     octx.stroke();
 
+    // Inner metallic rim highlight
+    octx.beginPath();
+    octx.arc(cx, cy, r - 4, 0, Math.PI * 2);
+    octx.strokeStyle = 'rgba(148, 163, 184, 0.22)';
+    octx.lineWidth = 1.5;
+    octx.stroke();
+
+    // Radial armor seams
+    octx.strokeStyle = 'rgba(15, 23, 42, 0.75)';
+    octx.lineWidth = 2;
+    for (let s = 0; s < 4; s++) {
+        const a = (s * Math.PI) / 2 + Math.PI / 4;
+        octx.beginPath();
+        octx.moveTo(cx + Math.cos(a) * (r * 0.52), cy + Math.sin(a) * (r * 0.52));
+        octx.lineTo(cx + Math.cos(a) * (r - 2), cy + Math.sin(a) * (r - 2));
+        octx.stroke();
+    }
+
+    // Glowing cyan energy ring
     octx.beginPath();
     octx.arc(cx, cy, r * 0.52, 0, Math.PI * 2);
-    octx.strokeStyle = 'rgba(56, 189, 248, 0.38)';
-    octx.lineWidth = 2;
+    octx.strokeStyle = 'rgba(56, 189, 248, 0.55)';
+    octx.lineWidth = 2.5;
     octx.stroke();
 
-    if (r >= 70) {
-        const coreGrad = octx.createRadialGradient(cx, cy, 0, cx, cy, r * 0.36);
-        coreGrad.addColorStop(0, 'rgba(56, 189, 248, 0.50)');
-        coreGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
-        octx.fillStyle = coreGrad;
-        octx.beginPath();
-        octx.arc(cx, cy, r * 0.36, 0, Math.PI * 2);
-        octx.fill();
-    }
+    // Central reactor core
+    const coreGrad = octx.createRadialGradient(cx, cy, 0, cx, cy, r * 0.42);
+    coreGrad.addColorStop(0, r >= 70 ? 'rgba(125, 211, 252, 0.72)' : 'rgba(56, 189, 248, 0.42)');
+    coreGrad.addColorStop(0.55, 'rgba(56, 189, 248, 0.22)');
+    coreGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+    octx.fillStyle = coreGrad;
+    octx.beginPath();
+    octx.arc(cx, cy, r * 0.42, 0, Math.PI * 2);
+    octx.fill();
 
     const entry = { canvas: c, offset: cx };
     obstacleSpriteCache.set(r, entry);
@@ -2337,31 +3018,58 @@ function getFighterSprite(color, barrelColor = '#94a3b8') {
 
     sctx.translate(mid, mid);
 
-    sctx.fillStyle = 'rgba(2, 6, 23, 0.52)';
+    // Ground contact shadow
+    sctx.fillStyle = 'rgba(2, 6, 23, 0.58)';
     sctx.beginPath();
-    sctx.arc(3, 5, 19, 0, Math.PI * 2);
+    sctx.arc(3, 6, 20, 0, Math.PI * 2);
     sctx.fill();
 
-    sctx.fillStyle = barrelColor;
-    sctx.fillRect(6, -4.5, 20, 9);
+    // Rear thruster pods
+    sctx.fillStyle = '#1e293b';
+    sctx.fillRect(-19, -11, 8, 6);
+    sctx.fillRect(-19, 5, 8, 6);
+    sctx.fillStyle = '#38bdf8';
+    sctx.fillRect(-20, -9.5, 2.5, 3);
+    sctx.fillRect(-20, 6.5, 2.5, 3);
 
+    // Sleek plasma cannon assembly
+    sctx.fillStyle = '#0f172a';
+    sctx.fillRect(6, -6, 21, 12);
+    sctx.fillStyle = barrelColor;
+    sctx.fillRect(8, -4.2, 19, 3.2);
+    sctx.fillRect(8, 1.0, 19, 3.2);
+    sctx.fillStyle = '#ffffff';
+    sctx.fillRect(23, -3.2, 4, 1.5);
+    sctx.fillRect(23, 1.7, 4, 1.5);
+
+    // Main armored chassis with radial shading
+    const hullGrad = sctx.createRadialGradient(-5, -6, 2, 0, 0, 19);
+    hullGrad.addColorStop(0, '#ffffff');
+    hullGrad.addColorStop(0.28, color);
+    hullGrad.addColorStop(1, '#090d16');
     sctx.beginPath();
     sctx.arc(0, 0, 18, 0, Math.PI * 2);
-    sctx.fillStyle = color;
+    sctx.fillStyle = hullGrad;
     sctx.fill();
-    sctx.lineWidth = 3;
+    sctx.lineWidth = 2.8;
     sctx.strokeStyle = '#0f172a';
     sctx.stroke();
 
-    sctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+    // Inner tech ring
     sctx.beginPath();
-    sctx.arc(-4, -5, 7, 0, Math.PI * 2);
-    sctx.fill();
+    sctx.arc(0, 0, 13.5, 0, Math.PI * 2);
+    sctx.strokeStyle = 'rgba(255, 255, 255, 0.24)';
+    sctx.lineWidth = 1.2;
+    sctx.stroke();
 
-    sctx.fillStyle = '#ffffff';
+    // Glowing tactical visor
+    sctx.fillStyle = '#e0f2fe';
     sctx.beginPath();
-    sctx.arc(7, 0, 5, 0, Math.PI * 2);
+    sctx.ellipse(7.5, 0, 4.5, 6.2, 0, 0, Math.PI * 2);
     sctx.fill();
+    sctx.strokeStyle = '#0f172a';
+    sctx.lineWidth = 1.4;
+    sctx.stroke();
 
     spriteCache.set(key, c);
     return c;
@@ -2399,9 +3107,14 @@ for (const key in CRATE_TYPES) {
 }
 
 const DIFFICULTY_CONFIG = {
-    easy:   { speed: 2.3, fireRate: 85, accuracy: 0.35, hp: 60,  spawnBuffChance: 0.25 },
-    medium: { speed: 2.9, fireRate: 55, accuracy: 0.18, hp: 80,  spawnBuffChance: 0.45 },
-    hard:   { speed: 3.5, fireRate: 36, accuracy: 0.07, hp: 100, spawnBuffChance: 0.70 }
+    // Recruit = the old Elite tier, Veteran = a tougher "Master" tier, Elite = the new "Demon" tier.
+    // sightSq   = bot detection/firing range (squared)
+    // hunterChance = chance a bot hunts the current king
+    // roamBias = chance an idle bot patrols toward the player instead of wandering randomly (matters in the big arena)
+    // backoffSq = distance (squared) below which a bot backs away instead of pressing the attack
+    easy:   { speed: 3.5, fireRate: 36, accuracy: 0.07,  hp: 100, spawnBuffChance: 0.70, sightSq: 313600, hunterChance: 0.80, backoffSq: 40000, roamBias: 0.35 },
+    medium: { speed: 4.0, fireRate: 27, accuracy: 0.04,  hp: 115, spawnBuffChance: 0.85, sightSq: 409600, hunterChance: 0.90, backoffSq: 28000, roamBias: 0.55 },
+    hard:   { speed: 4.5, fireRate: 19, accuracy: 0.015, hp: 130, spawnBuffChance: 1.00, sightSq: 490000, hunterChance: 1.00, backoffSq: 16000, roamBias: 0.75 }
 };
 
 const BOT_NAMES = [
@@ -2430,6 +3143,18 @@ const obstacles = [
     { x: 650, y: 650, r: 55 }
 ];
 
+// Extra cover for the larger arena: two outer rings so the new space isn't empty open ground.
+(function addOuterCover() {
+    const ring = (count, dist, r, offset) => {
+        for (let i = 0; i < count; i++) {
+            const a = offset + (i / count) * Math.PI * 2;
+            obstacles.push({ x: Math.round(Math.cos(a) * dist), y: Math.round(Math.sin(a) * dist), r });
+        }
+    };
+    ring(8,  1150, 70, Math.PI / 8);   // inner ring
+    ring(12, 1600, 80, 0);             // outer ring
+})();
+
 // Animated Main Menu Background
 const menuSparks = Array.from({ length: 42 }, () => ({
     x: Math.random() * 1920,
@@ -2442,6 +3167,10 @@ const menuSparks = Array.from({ length: 42 }, () => ({
 }));
 
 let menuAnimTick = 0;
+let menuRaf = 0;
+let gameRaf = 0;
+function startMenuLoop() { cancelAnimationFrame(menuRaf); menuRaf = requestAnimationFrame(renderMenuBackground); }
+function startGameLoop() { cancelAnimationFrame(gameRaf); gameRaf = requestAnimationFrame(gameLoop); }
 function renderMenuBackground() {
     if (gameRunning) return;
     menuAnimTick++;
@@ -2535,7 +3264,7 @@ function renderMenuBackground() {
     }
     ctx.globalAlpha = 1;
 
-    requestAnimationFrame(renderMenuBackground);
+    menuRaf = requestAnimationFrame(renderMenuBackground);
 }
 
 // Menu Selectors
@@ -2576,7 +3305,7 @@ let bossActive = false;
 let nextBossTick = 60 * 90;
 let killStreak = 0;
 let bountyValue = 500;
-let riskZone = { active:false, x:0, y:0, r:190, damageTimer:0, endTick:0 };
+let riskZone = { active:false, x:0, y:0, r:RISK_ZONE_R, damageTimer:0, endTick:0 };
 let missionState = { date:'', progress:{kills:0,bosses:0,kingKills:0,streaks:0,rare:0}, claimed:{kills:false,bosses:false,kingKills:false,streaks:false,rare:false} };
 
 function todayKey(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
@@ -2593,7 +3322,7 @@ const DAILY_MISSIONS=[
  {id:'streaks',name:'Kill Chain',desc:'Reach a 5-kill streak',goal:5,reward:600},
  {id:'rare',name:'Cache Runner',desc:'Collect 2 rare loot caches',goal:2,reward:500}
 ];
-function missionAdd(id,n=1){ loadDailyMissions(); const m=DAILY_MISSIONS.find(x=>x.id===id); if(!m||missionState.claimed[id]) return; missionState.progress[id]=Math.min(m.goal,(missionState.progress[id]||0)+n); if(missionState.progress[id]>=m.goal){missionState.claimed[id]=true; addCredits(m.reward); announceFeature(m.name+' COMPLETE +'+m.reward+' CREDITS','#4ade80');} saveDailyMissions(); renderMissions(); }
+function missionAdd(id,n=1){ loadDailyMissions(); const m=DAILY_MISSIONS.find(x=>x.id===id); if(!m||missionState.claimed[id]) return; missionState.progress[id]=Math.min(m.goal,(missionState.progress[id]||0)+n); if(missionState.progress[id]>=m.goal){missionState.claimed[id]=true; addCredits(m.reward); announceFeature('MISSION COMPLETE',m.name+' +'+m.reward+' CREDITS','#4ade80');} saveDailyMissions(); renderMissions(); }
 function renderMissions(){ const box=document.getElementById('mission-list'); if(!box)return; loadDailyMissions(); box.innerHTML=DAILY_MISSIONS.map(m=>{const p=missionState.progress[m.id]||0;const done=missionState.claimed[m.id];return `<div class="mission-card ${done?'done':''}"><strong>${done?'✓ ':''}${m.name}</strong><small>${m.desc} • Reward ${m.reward.toLocaleString()} credits</small><div class="mission-progress"><span style="width:${Math.min(100,p/m.goal*100)}%"></span></div><small>${p}/${m.goal}</small></div>`}).join(''); }
 function announceFeature(title,msg,color='#38bdf8'){ const panel=document.getElementById('feature-panel'); if(!panel)return; document.getElementById('feature-title').textContent=title; document.getElementById('feature-message').textContent=msg; panel.style.borderColor=color; panel.classList.remove('hidden'); clearTimeout(announceFeature.timer); announceFeature.timer=setTimeout(()=>panel.classList.add('hidden'),3200); spawnFloatingText(player?player.x:0,player?player.y-55:0,msg,color); }
 const featureHudEls = {
@@ -2608,11 +3337,11 @@ function updateFeatureHUD(){
   fh.classList.toggle('hidden', !gameRunning);
   featureHudEls.streak.textContent = killStreak;
   featureHudEls.bounty.textContent = Math.round(bountyValue).toLocaleString();
-  featureHudEls.risk.textContent = riskZone.active ? Math.max(0, Math.ceil((riskZone.endTick - frameTick) / 60)) + 's' : 'OFFLINE';
-  featureHudEls.boss.textContent = bossActive ? 'ACTIVE' : Math.max(0, Math.ceil((nextBossTick - frameTick) / 60)) + 's';
+  featureHudEls.risk.textContent = riskZone.active ? Math.max(0, Math.ceil((riskZone.endTick - frameTick) / 60)) + 's' : 'OFF';
+  featureHudEls.boss.textContent = bossActive ? 'ON' : Math.max(0, Math.ceil((nextBossTick - frameTick) / 60)) + 's';
 }
 function startRiskZone(){
-  const p=getSafeSpawnPosition(false); riskZone={active:true,x:p.x,y:p.y,r:190,damageTimer:0,endTick:frameTick+60*35};
+  const p=getSafeSpawnPosition(false); riskZone={active:true,x:p.x,y:p.y,r:RISK_ZONE_R,damageTimer:0,endTick:frameTick+60*35};
   announceFeature('RISK / REWARD ZONE','2X KILL CREDITS • TAKE DAMAGE INSIDE','#c084fc');
 }
 function updateRiskZone(){
@@ -2641,6 +3370,7 @@ function evolveShopBonus(p){
   if(getShopLevel('nanites')>=5)p.shopRegenLevel+=1;
   if(getShopLevel('magnet')>=5)p.shopCreditBoostLevel+=1;
   if(getShopLevel('hunter')>=5)p.shopDamageBoostLevel+=1;
+  p.hp=p.maxHp; p.stamina=p.maxStamina;
 }
 loadDailyMissions();
 
@@ -2656,15 +3386,55 @@ const particlePool = Array.from({ length: MAX_PARTICLES }, () => ({
 }));
 let activeParticleCount = 0;
 
-const MAX_RINGS = 16;
+const MAX_RINGS = 20;
 const ringPool = Array.from({ length: MAX_RINGS }, () => ({
     active: false, x: 0, y: 0, r: 8, maxR: 55, alpha: 0, color: '#38bdf8'
 }));
+
+const MAX_FLASHES = 28;
+const flashPool = Array.from({ length: MAX_FLASHES }, () => ({
+    active: false, x: 0, y: 0, angle: 0, r: 14, alpha: 0, color: '#38bdf8'
+}));
+function spawnMuzzleFlash(x, y, angle, color) {
+    if (!QUALITY_CONFIG[settings.quality].highDetail) return;
+    for (let i = 0; i < MAX_FLASHES; i++) {
+        const f = flashPool[i];
+        if (!f.active) {
+            f.active = true;
+            f.x = x;
+            f.y = y;
+            f.angle = angle;
+            f.r = 15;
+            f.alpha = 0.95;
+            f.color = color;
+            return;
+        }
+    }
+}
+
+// Ambient floating cyber dust motes inside the arena
+const ambientMotes = Array.from({ length: 90 }, () => {
+    const a = Math.random() * Math.PI * 2;
+    const d = Math.sqrt(Math.random()) * (ARENA_RADIUS - 80);
+    return {
+        x: Math.cos(a) * d,
+        y: Math.sin(a) * d,
+        vx: (Math.random() - 0.5) * 0.35,
+        vy: (Math.random() - 0.5) * 0.35,
+        size: Math.random() * 2 + 1,
+        phase: Math.random() * Math.PI * 2,
+        color: Math.random() < 0.65 ? '#38bdf8' : '#818cf8'
+    };
+});
 
 const MAX_TEXTS = 12;
 const textPool = Array.from({ length: MAX_TEXTS }, () => ({
     active: false, x: 0, y: 0, text: '', color: '#fff', alpha: 0
 }));
+
+function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 
 const hudCache = {
     hp: -1,
@@ -2745,7 +3515,7 @@ function resumeMatch() {
     if (settings.music) BackgroundMusic.start('arena');
     lastFpsTime = performance.now();
     framesSinceLastFps = 0;
-    requestAnimationFrame(gameLoop);
+    startGameLoop();
 }
 
 document.addEventListener('visibilitychange', () => {
@@ -2753,8 +3523,13 @@ document.addEventListener('visibilitychange', () => {
         pauseMatch();
     }
 });
+window.addEventListener('blur', () => {
+    for (const k in keys) keys[k] = false;
+    touchSprintHeld = false;
+});
 
 window.addEventListener('keydown', e => {
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
     if ((e.code === 'Escape' || e.code === 'KeyP') && gameRunning) {
         e.preventDefault();
         togglePause();
@@ -2855,15 +3630,21 @@ canvas.addEventListener('touchmove', e => {
 
 function endJoystickTouch(e) {
     if (!joystick.active) return;
-    for (let i = 0; i < e.changedTouches.length; i++) {
-        if (e.changedTouches[i].identifier === joystick.touchId) {
-            joystick.active = false;
-            joystick.touchId = null;
-            joystick.dx = 0;
-            joystick.dy = 0;
-            joystick.force = 0;
-            break;
+    let released = (e.touches && e.touches.length === 0);
+    if (!released) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === joystick.touchId) {
+                released = true;
+                break;
+            }
         }
+    }
+    if (released) {
+        joystick.active = false;
+        joystick.touchId = null;
+        joystick.dx = 0;
+        joystick.dy = 0;
+        joystick.force = 0;
     }
 }
 canvas.addEventListener('touchend', endJoystickTouch, { passive: false });
@@ -2912,7 +3693,7 @@ function getSafeSpawnPosition(avoidPlayer = true) {
         if (avoidPlayer && player) {
             const pdx = x - player.x;
             const pdy = y - player.y;
-            if (pdx * pdx + pdy * pdy < 202500) continue;
+            if (pdx * pdx + pdy * pdy < SPAWN_MIN_PLAYER_DIST_SQ) continue;
         }
         return { x, y };
     }
@@ -3173,6 +3954,11 @@ class Fighter {
             const gunTipX = this.x + Math.cos(this.angle) * 28;
             const gunTipY = this.y + Math.sin(this.angle) * 28;
 
+            const flashColor = this.tripleShotTimer > 0 ? '#c084fc'
+                             : this.rapidFireTimer > 0 ? '#f59e0b'
+                             : this.isPlayer ? '#38bdf8' : '#fbbf24';
+            spawnMuzzleFlash(gunTipX, gunTipY, this.angle, flashColor);
+
             if (this.tripleShotTimer > 0) {
                 spawnBullet(gunTipX, gunTipY, this.angle - 0.16, this);
                 spawnBullet(gunTipX, gunTipY, this.angle, this);
@@ -3258,7 +4044,7 @@ class Bot extends Fighter {
         this.score = 500 + Math.floor(Math.random() * 3500);
         this.cachedTarget = null;
         this.cachedCrate = null;
-        this.kingHunter = Math.random() < 0.8;   // ~80% of bots go after whoever is king
+        this.kingHunter = Math.random() < DIFFICULTY_CONFIG[settings.difficulty].hunterChance;   // share of bots that go after whoever is king
 
         const buffChance = DIFFICULTY_CONFIG[settings.difficulty].spawnBuffChance;
         if (Math.random() < buffChance) {
@@ -3302,11 +4088,15 @@ class Bot extends Fighter {
         this.aiTimer++;
         const king = currentKing;
         const hunter = this.kingHunter && king && king !== this && king.hp > 0;
+        const sightSq = DIFFICULTY_CONFIG[settings.difficulty].sightSq;
 
         if (this.aiTimer % 80 === 0) {
             this.strafeDir *= -1;
             if (this.x * this.x + this.y * this.y > (ARENA_RADIUS - 250) * (ARENA_RADIUS - 250)) {
                 this.wanderAngle = Math.atan2(-this.y, -this.x) + (Math.random() - 0.5);
+            } else if (player && player.hp > 0 && Math.random() < DIFFICULTY_CONFIG[settings.difficulty].roamBias) {
+                // Idle bots drift toward the action so the larger arena doesn't leave them wandering alone
+                this.wanderAngle = Math.atan2(player.y - this.y, player.x - this.x) + (Math.random() - 0.5) * 1.2;
             } else {
                 this.wanderAngle = Math.random() * Math.PI * 2;
             }
@@ -3314,7 +4104,7 @@ class Bot extends Fighter {
 
         if (this.aiTimer % 6 === 0 || (this.cachedTarget && this.cachedTarget.hp <= 0)) {
             let best = null;
-            let bestDistSq = 313600;
+            let bestDistSq = sightSq;
 
             const pdx = player.x - this.x;
             const pdy = player.y - this.y;
@@ -3340,7 +4130,7 @@ class Bot extends Fighter {
                 const kdx = king.x - this.x, kdy = king.y - this.y;
                 const kd = kdx * kdx + kdy * kdy;
                 const threatClose = best && best !== king && bestDistSq < 22500;
-                if (!threatClose && kd < 313600 && hasLineOfSight(this.x, this.y, king.x, king.y)) best = king;
+                if (!threatClose && kd < sightSq && hasLineOfSight(this.x, this.y, king.x, king.y)) best = king;
             }
             this.cachedTarget = best;
             this.cachedCrate = this.findNearbyCrate(best ? 62500 : 144400);
@@ -3372,7 +4162,7 @@ class Bot extends Fighter {
                 }
             } else if (distSq < 32400 && this.tripleShotTimer > 0) {
                 wantsSprint = this.stamina > 45;
-            } else if (distSq < 40000) {
+            } else if (distSq < DIFFICULTY_CONFIG[settings.difficulty].backoffSq) {
                 moveAngle += Math.PI;
                 wantsSprint = this.hp < 35 && this.stamina > 30;
             } else if (distSq < 129600) {
@@ -3384,7 +4174,7 @@ class Bot extends Fighter {
             this.updateStamina(wantsSprint, true);
             this.move(Math.cos(moveAngle), Math.sin(moveAngle));
 
-            if (this.cooldown <= 0 && distSq < 313600) {
+            if (this.cooldown <= 0 && distSq < sightSq) {
                 const spread = (Math.random() - 0.5) * DIFFICULTY_CONFIG[settings.difficulty].accuracy;
                 this.angle += spread;
                 this.shoot();
@@ -3543,6 +4333,7 @@ function startMatch() {
     for (let i = 0; i < MAX_BULLETS; i++) bulletPool[i].active = false;
     for (let i = 0; i < MAX_PARTICLES; i++) particlePool[i].active = false;
     for (let i = 0; i < MAX_RINGS; i++) ringPool[i].active = false;
+    for (let i = 0; i < MAX_FLASHES; i++) flashPool[i].active = false;
     for (let i = 0; i < MAX_TEXTS; i++) textPool[i].active = false;
     activeParticleCount = 0;
 
@@ -3560,7 +4351,7 @@ function startMatch() {
     bots = [];
     frameTick = 0;
     bossWaveNumber = 0; bossActive = false; nextBossTick = 60*90;
-    killStreak = 0; bountyValue = 500; riskZone = {active:false,x:0,y:0,r:190,damageTimer:0,endTick:0};
+    killStreak = 0; bountyValue = 500; riskZone = {active:false,x:0,y:0,r:RISK_ZONE_R,damageTimer:0,endTick:0};
     loadDailyMissions();
 
     const startPos = getSafeSpawnPosition(false);
@@ -3571,7 +4362,7 @@ function startMatch() {
         spawnBot();
     }
 
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < CRATE_CAP; i++) {
         const p = getSafeSpawnPosition(false);
         spawnCrate(p.x, p.y);
     }
@@ -3589,7 +4380,7 @@ function startMatch() {
     if (settings.music) BackgroundMusic.start('arena');
     lastFpsTime = performance.now();
     framesSinceLastFps = 0;
-    requestAnimationFrame(gameLoop);
+    startGameLoop();
 }
 
 function endMatch() {
@@ -3664,7 +4455,7 @@ function syncHUD(forceLeaderboard = false) {
             targetHudEl.textContent = tName.toUpperCase();
             targetHudEl.className = 'danger';
         } else {
-            targetHudEl.textContent = 'SCANNING';
+            targetHudEl.textContent = '—';
             targetHudEl.className = 'muted';
         }
     }
@@ -3702,9 +4493,9 @@ function syncHUD(forceLeaderboard = false) {
             let html = '';
             const keys = new Set();
             const enter = k => (hudBuffKeys.has(k) ? '' : ' enter');
-            if (sh > 0) { keys.add('shield'); html += `<div class="buff-pill accent${enter('shield')}">SHIELD: ${sh}</div>`; }
-            if (player.rapidFireTimer > 0) { keys.add('rapid'); html += `<div class="buff-pill gold${enter('rapid')}">RAPID FIRE: ${rf}s</div>`; }
-            if (player.tripleShotTimer > 0) { keys.add('triple'); html += `<div class="buff-pill purple${enter('triple')}">TRIPLE SHOT: ${ts}s</div>`; }
+            if (sh > 0) { keys.add('shield'); html += `<div class="buff-pill accent${enter('shield')}" title="Shield"><svg class="hud-ico" viewBox="0 0 16 16"><path fill="currentColor" d="M8 1.5 2.5 3.8v4.1c0 3.5 2.3 6.2 5.5 7.1 3.2-.9 5.5-3.6 5.5-7.1V3.8L8 1.5z"/></svg>${sh}</div>`; }
+            if (player.rapidFireTimer > 0) { keys.add('rapid'); html += `<div class="buff-pill gold${enter('rapid')}" title="Rapid Fire"><svg class="hud-ico" viewBox="0 0 16 16"><path fill="currentColor" d="M2 4.5h6l-1.5 2.5H2V4.5zm2 3.5h7l-1.5 2.5H4V8zm2 3.5h8l-1.5 2.5H6v-2.5z"/></svg>${rf}s</div>`; }
+            if (player.tripleShotTimer > 0) { keys.add('triple'); html += `<div class="buff-pill purple${enter('triple')}" title="Triple Shot"><svg class="hud-ico" viewBox="0 0 16 16"><path fill="currentColor" d="M7.2 2h1.6v12H7.2V2zM2.5 4.2l1.4-.8 4.5 9.8-1.4.8-4.5-9.8zm9.6-.8 1.4.8-4.5 9.8-1.4-.8 4.5-9.8z"/></svg>${ts}s</div>`; }
             hudBuffKeys = keys;
             buffsRowEl.innerHTML = html;
         }
@@ -3714,7 +4505,7 @@ function syncHUD(forceLeaderboard = false) {
         const allFighters = [player, ...bots].sort((a, b) => b.score - a.score).slice(0, 5);
         lbListEl.innerHTML = allFighters.map((f, idx) => `
             <div class="lb-row ${f.isPlayer ? 'me' : ''} ${idx === 0 ? 'king' : ''}">
-                <span>#${idx + 1} ${f.name}</span>
+                <span>#${idx + 1} ${escapeHtml(f.name)}</span>
                 <span>${f.score.toLocaleString()}</span>
             </div>
         `).join('');
@@ -3777,22 +4568,53 @@ function drawWorld(camX, camY) {
     }
     ctx.restore();
 
-    ctx.strokeStyle = 'rgba(56, 189, 248, 0.18)';
+    // Rotating holographic arena sector rings
+    ctx.save();
+    ctx.rotate(frameTick * 0.0015);
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.22)';
     ctx.lineWidth = 2.5;
+    ctx.setLineDash([48, 28]);
     ctx.beginPath();
     ctx.arc(0, 0, 350, 0, Math.PI * 2);
     ctx.stroke();
+    ctx.restore();
 
-    ctx.strokeStyle = 'rgba(129, 140, 248, 0.14)';
+    ctx.save();
+    ctx.rotate(-frameTick * 0.001);
+    ctx.strokeStyle = 'rgba(129, 140, 248, 0.16)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([72, 36, 12, 36]);
     ctx.beginPath();
     ctx.arc(0, 0, 750, 0, Math.PI * 2);
     ctx.stroke();
+    ctx.restore();
 
+    // Player auto-lock radar perimeter
     ctx.beginPath();
     ctx.arc(player.x, player.y, PLAYER_LOCK_RANGE, 0, Math.PI * 2);
-    ctx.strokeStyle = lockedTarget ? 'rgba(248, 113, 113, 0.25)' : 'rgba(56, 189, 248, 0.12)';
+    ctx.strokeStyle = lockedTarget ? 'rgba(248, 113, 113, 0.28)' : 'rgba(56, 189, 248, 0.14)';
     ctx.lineWidth = 1.5;
+    if (qCfg.highDetail) ctx.setLineDash([12, 10]);
     ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Ambient floating cyber dust motes
+    if (qCfg.highDetail) {
+        for (let i = 0; i < ambientMotes.length; i++) {
+            const m = ambientMotes[i];
+            m.x += m.vx;
+            m.y += m.vy;
+            if (m.x * m.x + m.y * m.y > (ARENA_RADIUS - 60) * (ARENA_RADIUS - 60)) {
+                m.vx *= -1;
+                m.vy *= -1;
+            }
+            if (Math.abs(m.x - camX) > cullX || Math.abs(m.y - camY) > cullY) continue;
+            ctx.globalAlpha = 0.25 + 0.2 * Math.sin(frameTick * 0.05 + m.phase);
+            ctx.fillStyle = m.color;
+            ctx.fillRect(m.x, m.y, m.size, m.size);
+        }
+        ctx.globalAlpha = 1;
+    }
 
     for (let i = 0; i < obstacles.length; i++) {
         const obs = obstacles[i];
@@ -3804,22 +4626,38 @@ function drawWorld(camX, camY) {
     for (let i = 0; i < crates.length; i++) {
         const cr = crates[i];
         if (Math.abs(cr.x - camX) > cullX || Math.abs(cr.y - camY) > cullY) continue;
-        ctx.drawImage(cr.sprite, cr.x - 18, cr.y - 18);
+        const bobY = qCfg.highDetail ? Math.sin(frameTick * 0.08 + i) * 2.5 : 0;
+        ctx.drawImage(cr.sprite, cr.x - 18, cr.y - 18 + bobY);
     }
 
     if (lockedTarget) {
+        // Tactical targeting laser line
+        ctx.save();
         ctx.beginPath();
         ctx.moveTo(player.x, player.y);
         ctx.lineTo(lockedTarget.x, lockedTarget.y);
-        ctx.strokeStyle = 'rgba(248, 113, 113, 0.34)';
+        ctx.strokeStyle = 'rgba(248, 113, 113, 0.38)';
         ctx.lineWidth = 1.5;
+        ctx.setLineDash([8, 6]);
+        ctx.lineDashOffset = -frameTick * 1.2;
         ctx.stroke();
+        ctx.restore();
 
-        ctx.beginPath();
-        ctx.arc(lockedTarget.x, lockedTarget.y, 26, 0, Math.PI * 2);
+        // Rotating segmented target lock reticle
+        ctx.save();
+        ctx.translate(lockedTarget.x, lockedTarget.y);
+        ctx.rotate(frameTick * 0.05);
+        const lockR = 26 + Math.sin(frameTick * 0.14) * 2;
         ctx.strokeStyle = '#f87171';
-        ctx.lineWidth = 2;
-        ctx.stroke();
+        ctx.lineWidth = 2.2;
+        for (let k = 0; k < 4; k++) {
+            const a0 = k * (Math.PI * 0.5) - 0.35;
+            const a1 = k * (Math.PI * 0.5) + 0.35;
+            ctx.beginPath();
+            ctx.arc(0, 0, lockR, a0, a1);
+            ctx.stroke();
+        }
+        ctx.restore();
     }
 
     drawSprintTrail();
@@ -3830,6 +4668,37 @@ function drawWorld(camX, camY) {
         bot.draw();
     }
 
+    // Muzzle flashes
+    if (qCfg.highDetail) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < MAX_FLASHES; i++) {
+            const fl = flashPool[i];
+            if (!fl.active) continue;
+            ctx.save();
+            ctx.translate(fl.x, fl.y);
+            ctx.rotate(fl.angle);
+            ctx.globalAlpha = fl.alpha;
+            ctx.fillStyle = fl.color;
+            ctx.beginPath();
+            ctx.moveTo(fl.r * 1.3, 0);
+            ctx.lineTo(0, -fl.r * 0.45);
+            ctx.lineTo(-fl.r * 0.35, 0);
+            ctx.lineTo(0, fl.r * 0.45);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(2, 0, fl.r * 0.28, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+        ctx.restore();
+    }
+
+    // Plasma bolts with additive glow & tapered energy trails
+    ctx.save();
+    if (qCfg.highDetail) ctx.globalCompositeOperation = 'lighter';
     for (let i = 0; i < MAX_BULLETS; i++) {
         const b = bulletPool[i];
         if (!b.active) continue;
@@ -3837,23 +4706,33 @@ function drawWorld(camX, camY) {
 
         if (qCfg.highDetail) {
             ctx.strokeStyle = b.color;
-            ctx.globalAlpha = 0.35;
-            ctx.lineWidth = 5;
+            ctx.globalAlpha = 0.48;
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
             ctx.beginPath();
-            ctx.moveTo(b.x - b.vx * 1.8, b.y - b.vy * 1.8);
+            ctx.moveTo(b.x - b.vx * 2.4, b.y - b.vy * 2.4);
             ctx.lineTo(b.x, b.y);
             ctx.stroke();
-            ctx.globalAlpha = 1;
+
+            ctx.globalAlpha = 0.35;
+            ctx.fillStyle = b.color;
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, 9, 0, Math.PI * 2);
+            ctx.fill();
         }
 
-        ctx.fillStyle = b.color;
-        ctx.globalAlpha = 0.35;
-        ctx.fillRect(b.x - 6.5, b.y - 6.5, 13, 13);
         ctx.globalAlpha = 1;
-        ctx.fillRect(b.x - 4, b.y - 4, 8, 8);
+        ctx.fillStyle = b.color;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(b.x - 1.5, b.y - 1.5, 3, 3);
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 2.1, 0, Math.PI * 2);
+        ctx.fill();
     }
+    ctx.restore();
 
     if (qCfg.highDetail) {
         for (let i = 0; i < MAX_RINGS; i++) {
@@ -3907,10 +4786,15 @@ function drawWorld(camX, camY) {
 }
 
 function drawMinimap() {
-    const mapRadius = viewW <= 640 ? 50 : 68;
-    const margin = viewW <= 640 ? 16 : 24;
-    const cx = viewW - mapRadius - margin;
-    const cy = viewH - mapRadius - margin;
+    const isPortraitMobile = (viewW <= 500) || (viewH > viewW && viewW <= 900);
+    const isLandscapeMobile = (viewW > viewH && viewH <= 560);
+    const mapRadius = isPortraitMobile ? 50 : isLandscapeMobile ? 46 : 80;
+    const margin = (isPortraitMobile || isLandscapeMobile) ? 12 : 24;
+    // Portrait: lift minimap above sprint button; Landscape: place minimap to the left of sprint button
+    const bottomLift = isPortraitMobile ? 96 : 0;
+    const rightShift = isLandscapeMobile ? 80 : 0;
+    const cx = viewW - mapRadius - margin - rightShift;
+    const cy = viewH - mapRadius - margin - bottomLift;
     const scale = mapRadius / ARENA_RADIUS;
 
     ctx.beginPath();
@@ -3977,16 +4861,17 @@ function gameLoop(now) {
 
     const qCfg = QUALITY_CONFIG[settings.quality];
 
-    if (bots.length < qCfg.botPop && Math.random() < 0.04) {
+    if (bots.length < qCfg.botPop && Math.random() < Math.min(0.2, 0.04 + 0.01 * (qCfg.botPop - bots.length))) {
         spawnBot();
     }
     if (!bossActive && frameTick >= nextBossTick) startBossWave();
     updateRiskZone();
+    if (player.hp <= 0) { killerName = 'the Risk Zone'; endMatch(); return; }
     if (championRespawnTick > 0 && frameTick >= championRespawnTick) {
         championRespawnTick = -1;
         spawnBot(true);
     }
-    if (crates.length < 16 && Math.random() < 0.03) {
+    if (crates.length < CRATE_CAP && Math.random() < 0.05) {
         const p = getSafeSpawnPosition(false);
         spawnCrate(p.x, p.y);
     }
@@ -4140,9 +5025,11 @@ function gameLoop(now) {
                         stats.kills++;
                         killStreak++;
                         missionAdd('kills');
-                        if(killStreak>=5) missionAdd('streaks',killStreak>=5?5:0);
+                        if (killStreak > (missionState.progress.streaks || 0)) {
+                            missionAdd('streaks', killStreak - (missionState.progress.streaks || 0));
+                        }
                         let baseCredit = target === currentKing ? bountyValue : 25;
-                        if (target.isBoss) { baseCredit += 2500 + bossWaveNumber*500; bossActive=false; missionAdd('bosses'); announceFeature('BOSS DESTROYED','WARDEN defeated — massive payout','#4ade80'); }
+                        if (target.isBoss) { baseCredit += 2500 + bossWaveNumber*500; bossActive=false; nextBossTick = frameTick + 60 * 90; missionAdd('bosses'); announceFeature('BOSS DESTROYED','WARDEN defeated — massive payout','#4ade80'); }
                         if (riskZone.active && Math.hypot(player.x-riskZone.x,player.y-riskZone.y)<riskZone.r) baseCredit*=2;
                         const boostLv = player ? (player.shopCreditBoostLevel || 0) : 0;
                         addCredits(boostLv > 0 ? Math.round(baseCredit * (1 + 0.10 * boostLv)) : Math.round(baseCredit));
@@ -4155,6 +5042,7 @@ function gameLoop(now) {
                         spawnFloatingText(target.x, target.y - 30, 'KING DOWN!', '#fbbf24');
                     }
                     if (target.isChampion && !target.isBoss) championRespawnTick = frameTick + 900;
+                    if (target.isBoss && !b.owner.isPlayer) { bossActive = false; nextBossTick = frameTick + 60 * 90; }
                     SoundFX.botKill(b.owner.isPlayer);
                     bots.splice(j, 1);
                 }
@@ -4183,6 +5071,14 @@ function gameLoop(now) {
         if (rw.alpha <= 0 || rw.r >= rw.maxR) rw.active = false;
     }
 
+    for (let i = 0; i < MAX_FLASHES; i++) {
+        const fl = flashPool[i];
+        if (!fl.active) continue;
+        fl.r *= 0.86;
+        fl.alpha -= 0.18;
+        if (fl.alpha <= 0) fl.active = false;
+    }
+
     for (let i = 0; i < MAX_TEXTS; i++) {
         const ft = textPool[i];
         if (!ft.active) continue;
@@ -4203,7 +5099,7 @@ function gameLoop(now) {
     drawMinimap();
     drawJoystick();
 
-    requestAnimationFrame(gameLoop);
+    gameRaf = requestAnimationFrame(gameLoop);
 }
 
 // Button Listeners
@@ -4226,7 +5122,6 @@ function addCredits(n) {
     updateCreditsUI(true);
 }
 updateCreditsUI();
-loadDailyMissions();
 
 // Cyber Shop: multi-level permanent upgrades saved on this device.
 const SHOP_MAX_LEVEL = 5;
@@ -4261,12 +5156,6 @@ function renderShop() {
         const level = getShopLevel(item.id);
         const maxed = level >= SHOP_MAX_LEVEL;
         const nextCost = maxed ? 0 : item.costs[level];
-        const nextValue = item.stat === 'maxHp' ? `+${item.value} HP`
-            : item.stat === 'maxStamina' ? `+${item.value} stamina`
-            : item.stat === 'fireRate' ? `${Math.round(item.value*100)}% faster cooldown`
-            : item.stat === 'regen' ? `+${item.value} HP / 2s`
-            : item.stat === 'creditBoost' ? `+${Math.round(item.value*100)}% credits`
-            : `+${Math.round(item.value*100)}% damage`;
         const levelDescription = level > 0 ? item.levelDesc[level - 1] : 'Locked — purchase Level 1 to activate this upgrade.';
         return `<div class="shop-item ${level > 0 ? 'owned' : ''}">
             <div class="shop-icon">${item.icon}</div>
@@ -4369,10 +5258,19 @@ function openPanel(panel) {
     panel.classList.remove('hidden');
 }
 function closePanels() {
-    if (settingsScreen.classList.contains('hidden') && controlsScreen.classList.contains('hidden')) return;
+    const shopScreen = document.getElementById('shop-screen');
+    const missionScreen = document.getElementById('mission-screen');
+    if (
+        settingsScreen.classList.contains('hidden') &&
+        controlsScreen.classList.contains('hidden') &&
+        (!shopScreen || shopScreen.classList.contains('hidden')) &&
+        (!missionScreen || missionScreen.classList.contains('hidden'))
+    ) return;
     SoundFX.uiClick();
     settingsScreen.classList.add('hidden');
     controlsScreen.classList.add('hidden');
+    if (shopScreen) shopScreen.classList.add('hidden');
+    if (missionScreen) missionScreen.classList.add('hidden');
     mainMenu.classList.remove('hidden');
 }
 document.getElementById('open-settings-btn').addEventListener('click', () => openPanel(settingsScreen));
@@ -4392,12 +5290,15 @@ function returnToMainMenu() {
     joystick.active = false;
     touchSprintHeld = false;
     hud.classList.add('hidden');
+    document.getElementById('feature-hud').classList.add('hidden');
+    document.getElementById('feature-panel').classList.add('hidden');
+    resetHudFX();
     pauseScreen.classList.add('hidden');
     endScreen.classList.add('hidden');
     touchControls.classList.add('hidden');
     mainMenu.classList.remove('hidden');
     if (settings.music) BackgroundMusic.start('lobby');
-    requestAnimationFrame(renderMenuBackground);
+    startMenuLoop();
 }
 
 document.getElementById('pause-menu-btn').addEventListener('click', returnToMainMenu);
@@ -4422,11 +5323,10 @@ syncFullscreenUI();
     const screen = document.getElementById('loading-screen');
     const bar = document.getElementById('loading-bar');
     const status = document.getElementById('loading-status');
-    const pctEl = document.getElementById('loading-pct');
     if (!screen || !bar) {
         mainMenu.classList.remove('hidden');
         if (settings.music) BackgroundMusic.start('lobby');
-        requestAnimationFrame(renderMenuBackground);
+        startMenuLoop();
         return;
     }
 
@@ -4447,7 +5347,7 @@ syncFullscreenUI();
                 screen.classList.add('fade-out');
                 mainMenu.classList.remove('hidden');
                 if (settings.music) BackgroundMusic.start('lobby');
-                requestAnimationFrame(renderMenuBackground);
+                startMenuLoop();
                 setTimeout(() => {
                     screen.remove();
                 }, 600);
