@@ -1066,7 +1066,7 @@
             }
             .lb-title { display: none; }
             .lb-row { font-size: 9px; padding: 0.5px 0; gap: 4px; }
-            .leaderboard .lb-row:nth-child(n+4) { display: none; }
+            html:not(.hud-full) .leaderboard .lb-row:nth-child(n+4) { display: none; }
             .hud-icon-btn {
                 width: 30px;
                 height: 30px;
@@ -1723,7 +1723,480 @@
             padding-left: max(14px, env(safe-area-inset-left));
             padding-right: max(14px, env(safe-area-inset-right));
         }
-</style>
+
+        /* =====================================================
+           UI v2 — fluid layer for phones, tablets & desktop
+           (CSS-only overrides; game logic untouched)
+           ===================================================== */
+        :root {
+            --hud-k: 1;
+            --u: calc(clamp(12px, calc(8px + 0.9vmin), 17px) * var(--hud-k));   /* HUD unit: scales with screen + HUD size pref */
+            --tap: 44px;                                    /* minimum touch target */
+            --edge-t: max(10px, env(safe-area-inset-top));
+            --edge-r: max(12px, env(safe-area-inset-right));
+            --edge-b: max(12px, env(safe-area-inset-bottom));
+            --edge-l: max(12px, env(safe-area-inset-left));
+        }
+        html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+        button:focus-visible, input:focus-visible {
+            outline: 2px solid #7dd3fc;
+            outline-offset: 2px;
+        }
+
+        /* --- In-game HUD: readable sizes everywhere --- */
+        #hud { padding-left: var(--edge-l); padding-right: var(--edge-r); }
+        .hud-left { max-width: min(60%, calc(var(--u) * 30)); gap: calc(var(--u) * .45); }
+        .hud-row { font-size: var(--u); gap: calc(var(--u) * .45); }
+        .bars-panel { padding: calc(var(--u) * .5) calc(var(--u) * .75); border-radius: calc(var(--u) * .7); gap: calc(var(--u) * .35); }
+        .bar-row { font-size: var(--u); gap: calc(var(--u) * .5); }
+        .bar-container { width: calc(var(--u) * 8.5); height: calc(var(--u) * .8); border-radius: 99px; }
+        .bar-label { width: calc(var(--u) * 1.3); }
+        .bar-val { width: 3ch; font-size: var(--u); font-variant-numeric: tabular-nums; }
+        .hud-ico { width: calc(var(--u) * 1.1); height: calc(var(--u) * 1.1); }
+        .stat-badge { padding: calc(var(--u) * .4) calc(var(--u) * .7); font-size: var(--u); border-radius: calc(var(--u) * .6); font-variant-numeric: tabular-nums; }
+        .buff-pill { font-size: calc(var(--u) * .9); padding: calc(var(--u) * .25) calc(var(--u) * .7); }
+        .leaderboard { font-size: var(--u); min-width: calc(var(--u) * 9); max-width: calc(var(--u) * 13); }
+        .lb-row { font-size: calc(var(--u) * .9); }
+        .hud-icon-btn { width: calc(var(--u) * 3); height: calc(var(--u) * 3); min-width: var(--tap); min-height: var(--tap); border-radius: calc(var(--u) * .8); }
+        .btn-ico { width: calc(var(--u) * 1.3); height: calc(var(--u) * 1.3); }
+        .feature-pill { font-size: calc(var(--u) * .85); padding: calc(var(--u) * .25) calc(var(--u) * .6); }
+        #feature-panel { font-size: calc(var(--u) * .9); max-width: calc(var(--u) * 22); }
+
+        /* --- Sprint button: big, thumb-friendly, scales on tablets --- */
+        #sprint-btn {
+            width: clamp(72px, 15vmin, 112px);
+            height: clamp(72px, 15vmin, 112px);
+            right: var(--edge-r);
+            bottom: calc(var(--edge-b) + 8px);
+        }
+        .sprint-ico { width: 42%; height: 42%; }
+
+        /* --- Menus & panels --- */
+        .screen { padding: max(16px, var(--edge-t)) var(--edge-r) max(16px, var(--edge-b)) var(--edge-l); }
+        h1 { font-size: clamp(28px, calc(14px + 5vmin), 68px); }
+        .subtitle { font-size: clamp(12px, calc(10px + .9vmin), 17px); }
+        .menu-card { max-width: clamp(320px, calc(120px + 46vmin), 520px); padding: clamp(16px, 2.4vmin, 28px) clamp(18px, 3vmin, 32px); }
+        .panel-card { max-width: min(760px, 100%); }
+        .screen > .primary-btn, .screen > .secondary-btn { width: min(340px, 100%); }
+        .primary-btn, .secondary-btn, .opt-btn, .menu-btn, .loot-chip.selectable { min-height: var(--tap); }
+        .menu-btn { min-height: clamp(52px, 7vmin, 68px); }
+        .menu-btn .mb-text strong { font-size: clamp(14px, calc(9px + 1.2vmin), 18px); }
+        .menu-btn .mb-text small { font-size: clamp(11px, calc(7px + .7vmin), 13px); }
+        input[type="text"] { min-height: var(--tap); font-size: 16px; }   /* 16px stops iOS zoom-on-focus */
+        .setting-info strong { font-size: clamp(14px, calc(9px + 1vmin), 17px); }
+        .setting-info span { font-size: clamp(11.5px, calc(7px + .8vmin), 14px); }
+        .ctrl-row { font-size: clamp(13px, calc(8px + 1vmin), 16px); }
+
+        /* --- Shop: fluid columns, larger text, no nested scrolling --- */
+        .shop-shell { width: min(1040px, 100%); max-height: none; overflow: visible; }
+        .shop-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); gap: 12px; }
+        .shop-item h3 { font-size: 15px; }
+        .shop-item p { font-size: 12.5px; }
+        .shop-next { font-size: 11.5px; }
+        .shop-level { font-size: 11px; }
+        .shop-buy { min-height: var(--tap); font-size: 13px; }
+        .shop-status { font-size: 13px; }
+        .shop-balance { font-size: 18px; }
+
+        /* --- Main menu: title left, hub right on landscape tablets / PC --- */
+        .menu-title-col, .menu-hub-col { display: contents; }
+        @media (orientation: landscape) and (min-width: 760px) {
+            #main-menu:not(.hidden) { flex-direction: row; align-items: flex-start; justify-content: center; gap: clamp(24px, 6vw, 96px); }
+            .menu-title-col, .menu-hub-col { display: flex; flex-direction: column; align-items: center; margin-block: auto; }
+            .menu-title-col { flex: 1 1 0; max-width: 520px; }
+            .menu-hub-col { flex: 0 1 clamp(340px, 46vw, 480px); width: clamp(340px, 46vw, 480px); }
+            .menu-hub-col .menu-card { max-width: none; margin-bottom: 12px; }
+            .menu-hub-col { min-width: 0; }
+            .menu-hub-col .loadout { width: 100%; display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+            .menu-hub-col .loot-chip { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 2px; padding-top: 6px; padding-bottom: 6px; }
+            .menu-hub-col .loot-chip span { font-size: 10px; margin: 0; }
+            .menu-hub-col .pickup-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; width: 100%; }
+            .menu-hub-col .loot-chip { min-width: 0; padding-left: 4px; padding-right: 4px; }
+        }
+        @media (orientation: landscape) and (max-height: 480px) {
+            #main-menu .title-divider, .menu-btn .mb-text small { display: none; }
+            .menu-btn { min-height: var(--tap); padding-top: 6px; padding-bottom: 6px; }
+        }
+
+        /* =====================================================
+           UI v3 — minimal: less text, tighter spacing, no scrolling
+           ===================================================== */
+        /* Sub-screens: small title, no tagline */
+        .screen:not(#main-menu):not(#pause-screen):not(#end-screen) h1 { font-size: clamp(20px, calc(10px + 2.6vmin), 34px); margin-bottom: 4px; }
+        .screen:not(#main-menu) .subtitle { display: none; }
+        .panel-card { padding: clamp(10px, 1.6vmin, 18px) clamp(12px, 2vmin, 22px); margin-bottom: 10px; }
+        .panel-section { margin-top: 6px !important; margin-bottom: 4px; }
+
+        /* Settings: drop descriptions, one tight row per option */
+        .setting-info span { display: none; }
+        .setting-row { padding-top: 6px; padding-bottom: 6px; gap: 8px; }
+
+        /* Controls: keep the key list, drop pickups and long tip */
+        .guide-tip, .pickup-list, #controls-screen .panel-section + .pickup-list { display: none; }
+        #controls-screen .panel-section[style] { display: none; }
+        .ctrl-row { padding-top: 5px; padding-bottom: 5px; }
+
+        /* Shop: compact cards — icon, name, level, one action */
+        .shop-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr)); gap: 8px; }
+        .shop-item { padding: 10px; }
+        .shop-item p { display: none; }
+        .shop-icon { width: 30px; height: 30px; margin-bottom: 6px; font-size: 11px; }
+        .shop-item h3 { font-size: 13px; margin-bottom: 2px; }
+        .shop-level { margin-bottom: 5px; }
+        .shop-progress { margin-bottom: 6px; }
+        .shop-next { min-height: 0; margin-bottom: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .shop-buy { font-size: 11.5px; padding: 6px; }
+        .shop-topbar { margin-bottom: 6px; }
+        .shop-status { margin-top: 6px; }
+
+        /* Main menu: just title, callsign, play and four entries */
+        .title-emblem, .title-divider, .loadout-note, .menu-btn .mb-text small { display: none; }
+        #main-menu .subtitle { display: none; }
+        .menu-btn { min-height: var(--tap); padding-top: 6px; padding-bottom: 6px; }
+        .menu-hub-col .menu-card { margin-bottom: 8px; }
+
+        /* Pause / end screens: tighter stack */
+        #pause-screen .menu-card, #end-screen .menu-card { margin-bottom: 10px; }
+        #pause-screen .secondary-btn, #end-screen .secondary-btn { margin-top: 6px; }
+
+        /* HUD: drop FPS and bots counters, keep top 3 on the board */
+        html:not(.hud-full) .hud-stats .stat-badge[title="FPS"], html:not(.hud-full) .hud-stats .stat-badge[title="Bots"] { display: none; }
+        .leaderboard .lb-row:nth-child(n+4) { display: none; }
+    
+        /* Phones: two shop columns, buttons carry the next-level info */
+        @media (max-width: 600px) {
+            .shop-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .shop-next, .shop-progress { display: none; }
+            .shop-item { padding: 8px; }
+        }
+        /* Short landscape screens: no headings, wide shop rows */
+        @media (orientation: landscape) and (max-height: 480px) {
+            .screen h1 { display: none; }
+            .screen { padding-top: max(8px, var(--edge-t)); padding-bottom: max(8px, var(--edge-b)); }
+            .shop-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 118px), 1fr)); }
+            .shop-next, .shop-progress { display: none; }
+            .shop-icon { display: none; }
+            .setting-row { padding-top: 3px; padding-bottom: 3px; }
+            .panel-card { margin-bottom: 6px; }
+            .screen > .primary-btn, .screen > .secondary-btn { margin-top: 4px; min-height: 40px; padding-top: 6px; padding-bottom: 6px; }
+            #pause-screen .menu-card, #end-screen .menu-card { margin-bottom: 6px; padding-top: 8px; padding-bottom: 8px; }
+            #main-menu h1 { display: block; }
+        }
+    
+        /* Missions: compact cards, two columns when there is room */
+        #mission-screen .mission-list { gap: 6px; margin: 6px 0; }
+        .mission-card { padding: 8px 10px; }
+        .mission-progress { margin-top: 4px; }
+        @media (min-width: 560px) { #mission-screen .mission-list { grid-template-columns: 1fr 1fr; } }
+        @media (max-height: 700px) { .shop-icon { display: none; } }
+        @media (orientation: landscape) and (max-height: 480px) {
+            .opt-btn { min-height: 38px; }
+            .panel-section { margin-top: 2px !important; margin-bottom: 2px; }
+        }
+    
+        @media (orientation: landscape) and (max-height: 480px) {
+            #mission-screen .mission-list { grid-template-columns: repeat(3, 1fr); }
+            .mission-card { padding: 6px 8px; }
+        }
+    
+        /* =====================================================
+           UI v4 — player color, kill feed, HUD prefs, controller,
+           extra motion
+           ===================================================== */
+        :root { --pc: #38bdf8; }
+
+        /* Sprint button: hidden automatically on mouse-driven PCs/laptops (Settings > Sprint button can override) */
+        @media (hover: hover) and (pointer: fine) { html:not(.sprint-show) #touch-controls { display: none !important; } }
+        html.sprint-hide #touch-controls { display: none !important; }
+        html.sprint-show #touch-controls:not(.hidden) { display: block !important; }
+
+        /* HUD detail: compact hides extras (see v3); full brings them back */
+        html.hud-full .stat-badge.hide-sm, html.hud-full .hud-stats .stat-badge[title="FPS"], html.hud-full .hud-stats .stat-badge[title="Bots"] { display: inline-flex !important; }
+        html.hud-full .leaderboard .lb-row:nth-child(n+4) { display: flex !important; }
+
+        /* Main menu: square player-color button next to the callsign */
+        .name-color-row { display: flex; gap: 10px; align-items: stretch; }
+        .name-color-row input[type="text"] { flex: 1; min-width: 0; width: auto; }
+        .color-btn {
+            flex: none; width: 52px; height: 52px; aspect-ratio: 1 / 1; padding: 0;
+            border-radius: 12px; border: 2px solid var(--pc); background: rgba(10, 16, 30, 0.9);
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            box-shadow: 0 0 14px -3px var(--pc), inset 0 0 12px -6px var(--pc);
+            transition: transform .15s, box-shadow .2s; -webkit-tap-highlight-color: transparent;
+        }
+        .color-btn canvas, .color-preview canvas { position: static; inset: auto; touch-action: auto; pointer-events: none; }
+        .color-btn canvas { width: 36px; height: 36px; display: block; transform: rotate(-90deg); }
+        .color-btn:hover { transform: translateY(-2px) rotate(-3deg); box-shadow: 0 0 20px -2px var(--pc), inset 0 0 12px -6px var(--pc); }
+        .color-btn:active { transform: scale(.92); }
+
+        /* Color screen */
+        #color-screen .color-card { display: flex; flex-direction: column; align-items: center; gap: 14px; max-width: min(620px, 100%); }
+        .color-preview { flex: none; width: clamp(96px, 24vmin, 180px); aspect-ratio: 1 / 1; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            background: radial-gradient(circle, color-mix(in srgb, var(--pc) 28%, transparent), transparent 70%); }
+        .color-preview canvas { width: 78%; height: 78%; transform: rotate(-90deg); filter: drop-shadow(0 0 14px var(--pc)); }
+        .swatch-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; width: 100%; }
+        .swatch { aspect-ratio: 1 / 1; border-radius: 12px; border: 2px solid rgba(255,255,255,.12); background: var(--sw); cursor: pointer; padding: 0; min-height: 40px;
+            transition: transform .15s, box-shadow .2s, border-color .2s; -webkit-tap-highlight-color: transparent; }
+        .swatch:hover { transform: translateY(-2px) scale(1.05); }
+        .swatch.selected { border-color: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,.18), 0 0 18px var(--sw); }
+        @media (min-width: 620px) and (orientation: landscape) { #color-screen .color-card { flex-direction: row; gap: 28px; width: auto; } .swatch-grid { width: auto; grid-template-columns: repeat(4, clamp(44px, 9.5vmin, 76px)); } }
+        @media (max-width: 380px) { .swatch-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+        /* Settings: two columns when wide */
+        @media (min-width: 640px) {
+            #settings-screen .panel-card { column-count: 2; column-gap: 32px; max-width: min(920px, 100%); }
+            #settings-screen .panel-card > * { break-inside: avoid; }
+            #settings-screen #hud-settings { break-before: column; margin-top: 6px !important; }
+        }
+
+        /* Kill feed */
+        #kill-feed { position: fixed; left: var(--edge-l); top: calc(var(--edge-t) + var(--u) * 11.5); z-index: 6; display: flex; flex-direction: column; gap: 4px;
+            pointer-events: none; max-width: min(48vw, calc(var(--u) * 24)); }
+        html.no-killfeed #kill-feed { display: none; }
+        .kf-item { display: flex; align-items: center; gap: .5em; padding: .3em .7em; font-size: calc(var(--u) * .9); font-weight: 800;
+            background: rgba(10, 16, 30, .82); border: 1px solid #334155; border-left: 3px solid #64748b; border-radius: .5em; white-space: nowrap; overflow: hidden;
+            animation: kfIn .28s cubic-bezier(.2, .9, .3, 1.2), kfOut .4s ease 3.9s forwards; }
+        .kf-item b { overflow: hidden; text-overflow: ellipsis; max-width: 9em; }
+        .kf-item i { color: #94a3b8; font-style: normal; }
+        .kf-item.me { border-left-color: #fbbf24; background: rgba(40, 28, 6, .85); }
+        .kf-item.died { border-left-color: #f87171; background: rgba(48, 12, 16, .85); }
+        .kf-item.bots { opacity: .62; }
+        @keyframes kfIn { from { opacity: 0; transform: translateX(-20px) scale(.95); } to { opacity: 1; transform: none; } }
+        @keyframes kfOut { to { opacity: 0; transform: translateY(-6px); } }
+
+        /* Toast */
+        #ui-toast { position: fixed; left: 50%; bottom: calc(var(--edge-b) + 14px); transform: translate(-50%, 20px); z-index: 60; padding: 9px 16px; border-radius: 99px;
+            background: rgba(10, 16, 30, .94); border: 1px solid #38bdf8; color: #e2e8f0; font-weight: 700; font-size: 13px; opacity: 0; pointer-events: none;
+            transition: opacity .25s, transform .25s; }
+        #ui-toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+        /* Controller focus ring */
+        html.pad-nav :focus { outline: 3px solid #7dd3fc; outline-offset: 3px; border-radius: 10px; }
+
+        /* Button ripple */
+        .rip-host { position: relative; overflow: hidden; }
+        .rip { position: absolute; border-radius: 50%; background: rgba(255,255,255,.35); transform: scale(0); animation: ripple .6s ease-out forwards; pointer-events: none; }
+        @keyframes ripple { to { transform: scale(1); opacity: 0; } }
+        .pop-in { animation: popIn .35s cubic-bezier(.2, 1.4, .4, 1); }
+        @keyframes popIn { 0% { transform: rotate(-90deg) scale(.7); } 100% { transform: rotate(-90deg) scale(1); } }
+
+        /* Extra motion (skipped when the device asks for reduced motion) */
+        @media (prefers-reduced-motion: no-preference) {
+            .title-emblem { animation: floatY 4s ease-in-out infinite; }
+            .credits-pill .coin { animation: coinSpin 3.2s linear infinite; }
+            .menu-btn .mb-icon { transition: transform .2s; }
+            .menu-btn:hover .mb-icon { transform: scale(1.12) rotate(-5deg); }
+            .menu-btn:active { transform: scale(.98); }
+            .color-preview canvas { animation: shipBob 3.4s ease-in-out infinite; }
+            .shop-item.owned { animation: ownedGlow 3.6s ease-in-out infinite; }
+            .mission-card.done { animation: ownedGlow 3.6s ease-in-out infinite; }
+            .hud-icon-btn:active, #sprint-btn:active { transform: scale(.9); }
+            @keyframes floatY { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+            @keyframes coinSpin { 0% { transform: scaleX(1); } 50% { transform: scaleX(.15); } 100% { transform: scaleX(1); } }
+            @keyframes shipBob { 0%, 100% { transform: rotate(-90deg) translateX(0); } 50% { transform: rotate(-84deg) translateX(-5px); } }
+            @keyframes ownedGlow { 0%, 100% { box-shadow: 0 0 0 rgba(74,222,128,0); } 50% { box-shadow: 0 0 18px rgba(74,222,128,.22); } }
+        }
+    
+        /* Phones: label and two-option groups share one line; short landscape gets tighter rows */
+        @media (max-width: 639px) {
+            .setting-row { flex-direction: row !important; flex-wrap: wrap; align-items: center !important; gap: 4px 10px; padding-top: 4px; padding-bottom: 4px; }
+            .setting-row .setting-info { flex: 1 1 38%; min-width: 0; }
+            .setting-row .btn-group { flex: 1 1 100%; }
+            .setting-row .btn-group.two-col { flex: 1 1 52%; }
+            .setting-row .opt-btn { min-height: 40px; }
+        }
+        @media (orientation: landscape) and (max-height: 480px) {
+            .setting-row .opt-btn { min-height: 34px; }
+            .setting-row { padding-top: 2px; padding-bottom: 2px; }
+            .ctrl-row { padding-top: 2px; padding-bottom: 2px; font-size: 12px; }
+            #controls-screen .panel-section { margin-top: 2px !important; }
+        }
+    
+        @media (max-width: 639px) {
+            #settings-screen .panel-section { margin: 0 !important; font-size: 9.5px; }
+            #settings-screen .setting-row { padding-top: 2px; padding-bottom: 2px; }
+        }
+        @media (max-width: 639px) and (max-height: 720px) { #settings-screen h1 { display: none; } }
+    
+
+        /* =====================================================
+           CYBER ARENA UI UPGRADE — adaptive themes + feedback
+           ===================================================== */
+        :root {
+            --ui-accent: #38bdf8;
+            --ui-accent-rgb: 56, 189, 248;
+            --ui-secondary: #818cf8;
+            --ui-glow: rgba(56, 189, 248, .28);
+        }
+        #main-menu {
+            background:
+                radial-gradient(ellipse at 18% 18%, rgba(var(--ui-accent-rgb), .16), transparent 42%),
+                radial-gradient(ellipse at 82% 78%, rgba(129, 140, 248, .12), transparent 44%),
+                radial-gradient(circle at 50% 42%, rgba(14, 24, 48, .45) 0%, rgba(4, 7, 15, .92) 100%);
+        }
+        h1 {
+            background-image: linear-gradient(120deg, #f0f9ff 0%, var(--ui-accent) 48%, var(--ui-secondary) 100%);
+            background-size: 220% 100%;
+        }
+        .title-emblem {
+            color: color-mix(in srgb, var(--ui-accent) 72%, white);
+            border-color: color-mix(in srgb, var(--ui-accent) 55%, transparent);
+            background: rgba(var(--ui-accent-rgb), .10);
+            box-shadow: 0 0 22px var(--ui-glow);
+        }
+        .title-divider span.line { background: linear-gradient(90deg, transparent, var(--ui-accent), transparent); }
+        .title-divider span.diamond { background: var(--ui-accent); box-shadow: 0 0 14px var(--ui-accent); }
+        .emblem-dot { background: var(--ui-accent); box-shadow: 0 0 10px var(--ui-accent); }
+        .menu-card {
+            border-color: color-mix(in srgb, var(--ui-accent) 42%, #334155);
+            background-image:
+                radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(var(--ui-accent-rgb), .15), transparent 43%),
+                linear-gradient(180deg, rgba(22, 33, 56, .94) 0%, rgba(9, 16, 31, .97) 100%);
+            box-shadow: 0 20px 55px rgba(0, 0, 0, .58), 0 0 30px rgba(var(--ui-accent-rgb), .08), inset 0 1px 0 rgba(255,255,255,.08);
+            transition: border-color .22s ease, box-shadow .22s ease, background-position .22s ease;
+        }
+        .menu-card::before, .menu-card::after { border-color: var(--ui-accent); }
+        .card-corners::before, .card-corners::after { border-color: var(--ui-secondary); }
+        .primary-btn {
+            background: linear-gradient(115deg, color-mix(in srgb, var(--ui-accent) 90%, #0369a1), color-mix(in srgb, var(--ui-secondary) 84%, #312e81));
+            border-color: color-mix(in srgb, var(--ui-accent) 72%, white);
+            box-shadow: 0 7px 27px rgba(var(--ui-accent-rgb), .28);
+        }
+        .primary-btn:hover { box-shadow: 0 12px 36px rgba(var(--ui-accent-rgb), .42); }
+        .opt-btn:hover, .menu-btn:hover { border-color: var(--ui-accent); }
+        .opt-btn.active {
+            background: linear-gradient(135deg, color-mix(in srgb, var(--ui-accent) 88%, #075985), color-mix(in srgb, var(--ui-secondary) 80%, #312e81));
+            border-color: color-mix(in srgb, var(--ui-accent) 72%, white);
+            box-shadow: 0 0 16px rgba(var(--ui-accent-rgb), .24);
+        }
+        .menu-btn:hover {
+            background: linear-gradient(100deg, rgba(var(--ui-accent-rgb), .15), rgba(14, 30, 54, .95));
+            box-shadow: 0 0 22px rgba(var(--ui-accent-rgb), .14);
+        }
+        .menu-btn .mb-icon {
+            color: var(--ui-accent);
+            background: rgba(var(--ui-accent-rgb), .12);
+            border-color: rgba(var(--ui-accent-rgb), .36);
+        }
+        .menu-btn:hover .mb-icon { box-shadow: 0 0 15px rgba(var(--ui-accent-rgb), .24); }
+        .loadout .panel-section { color: var(--ui-accent); }
+        .loot-chip.selectable.selected {
+            box-shadow: 0 0 18px currentColor, inset 0 0 12px rgba(255,255,255,.08);
+            transform: translateY(-2px);
+        }
+        .credits-pill { border-color: rgba(251, 191, 36, .52); }
+        .hud-icon-btn:hover {
+            border-color: var(--ui-accent);
+            color: var(--ui-accent);
+            box-shadow: 0 0 16px rgba(var(--ui-accent-rgb), .2);
+            transform: translateY(-2px);
+        }
+        button, .loot-chip.selectable, .menu-btn, .stat-badge, .feature-pill { -webkit-tap-highlight-color: transparent; }
+        button:focus-visible, input:focus-visible {
+            outline: 2px solid var(--ui-accent) !important;
+            outline-offset: 3px;
+            box-shadow: 0 0 0 5px rgba(var(--ui-accent-rgb), .15);
+        }
+        .menu-statusline {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 9px;
+            margin: 0 auto 12px;
+            padding: 7px 12px;
+            width: fit-content;
+            max-width: 100%;
+            border: 1px solid rgba(var(--ui-accent-rgb), .24);
+            border-radius: 999px;
+            background: rgba(2, 6, 23, .58);
+            color: #a8b8cc;
+            font-size: 9px;
+            font-weight: 850;
+            letter-spacing: 1.1px;
+            text-transform: uppercase;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 5px 18px rgba(0,0,0,.16);
+        }
+        .menu-statusline .status-dot {
+            width: 7px; height: 7px; flex: 0 0 7px;
+            border-radius: 50%; background: #4ade80;
+            box-shadow: 0 0 10px rgba(74, 222, 128, .9);
+            animation: statusBlink 1.8s ease-in-out infinite;
+        }
+        .menu-statusline .status-sep { color: var(--ui-accent); opacity: .8; }
+        @keyframes statusBlink { 0%,100% { opacity: 1; } 50% { opacity: .42; } }
+        .theme-cycle-btn {
+            position: fixed;
+            top: 14px;
+            right: 72px;
+            z-index: 26;
+            min-width: 112px;
+            height: 44px;
+            padding: 0 11px;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            color: #dbeafe;
+            background: rgba(15, 23, 42, .9);
+            border: 1px solid rgba(var(--ui-accent-rgb), .48);
+            font: 850 10px/1 system-ui, sans-serif;
+            letter-spacing: 1px;
+            cursor: pointer;
+            box-shadow: 0 5px 18px rgba(0,0,0,.28), 0 0 15px rgba(var(--ui-accent-rgb), .12);
+            transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+        }
+        .theme-cycle-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(var(--ui-accent-rgb), .22); }
+        .theme-cycle-btn:active { transform: scale(.95); }
+        .theme-cycle-btn .theme-swatch {
+            width: 10px; height: 10px; border-radius: 50%;
+            background: var(--ui-accent); box-shadow: 0 0 10px var(--ui-accent);
+        }
+        .loadout-heading-row { display:flex; align-items:center; gap:8px; }
+        .loadout-heading-row .panel-section { flex:1; margin:4px 0 10px; }
+        .loadout-random-btn {
+            flex: 0 0 auto;
+            margin: 2px 0 8px;
+            min-height: 28px;
+            padding: 5px 9px;
+            border-radius: 7px;
+            border: 1px solid rgba(var(--ui-accent-rgb), .34);
+            background: rgba(var(--ui-accent-rgb), .08);
+            color: var(--ui-accent);
+            font: 850 9px/1 system-ui, sans-serif;
+            letter-spacing: .8px;
+            cursor: pointer;
+            transition: transform .16s ease, background .16s ease, box-shadow .16s ease;
+        }
+        .loadout-random-btn:hover { transform: translateY(-2px); background: rgba(var(--ui-accent-rgb), .16); box-shadow: 0 0 15px rgba(var(--ui-accent-rgb), .15); }
+        .loadout-random-btn:active { transform: scale(.95); }
+        .menu-card.ui-hover { border-color: var(--ui-accent); box-shadow: 0 22px 58px rgba(0,0,0,.58), 0 0 28px rgba(var(--ui-accent-rgb), .15), inset 0 1px 0 rgba(255,255,255,.08); }
+        .menu-btn, .opt-btn, .secondary-btn, .loot-chip.selectable, .stat-badge, .leaderboard, .shop-item, .mission-card {
+            transition-timing-function: cubic-bezier(.2,.8,.2,1);
+        }
+        .stat-badge { cursor: default; }
+        .stat-badge:hover { border-color: rgba(var(--ui-accent-rgb), .55); box-shadow: 0 0 14px rgba(var(--ui-accent-rgb), .12); }
+        .lb-row { transition: color .16s ease, transform .16s ease; }
+        .lb-row:hover { color: var(--ui-accent); transform: translateX(-2px); }
+        .feature-pill { transition: transform .18s ease, box-shadow .18s ease; }
+        .feature-pill:hover { transform: translateY(-2px); box-shadow: 0 0 13px rgba(var(--ui-accent-rgb), .18); }
+        @media (max-width: 640px) {
+            .theme-cycle-btn { top: max(10px, env(safe-area-inset-top)); right: 52px; min-width: 82px; height: 30px; padding: 0 7px; font-size: 8px; border-radius: 7px; }
+            .theme-cycle-btn .theme-swatch { width: 8px; height: 8px; }
+            .menu-statusline { gap: 6px; padding: 6px 9px; margin-bottom: 8px; font-size: 8px; letter-spacing: .7px; }
+            .loadout-random-btn { font-size: 8px; padding: 5px 7px; }
+        }
+        @media (orientation: landscape) and (max-height: 480px) {
+            .menu-statusline { display: none; }
+            .theme-cycle-btn { top: 8px; right: 62px; height: 34px; min-width: 94px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .menu-statusline .status-dot { animation: none; }
+            .theme-cycle-btn, .loadout-random-btn, .menu-btn, .opt-btn, .stat-badge, .lb-row { transition: none !important; }
+        }
+
+    </style>
 </head>
 <body>
 
@@ -1769,6 +2242,8 @@
 </div>
 
 <canvas id="arenaCanvas"></canvas>
+<div id="kill-feed" aria-live="polite"></div>
+<div id="ui-toast" role="status"></div>
 
 <div id="feature-hud" class="hidden">
   <div class="feature-pill boss" id="boss-pill" title="Boss Wave"><svg class="hud-ico" viewBox="0 0 16 16"><path fill="currentColor" d="M8 1a5 5 0 0 0-5 5v2.5L2 10v2h3v2h2v-2h2v2h2v-2h3v-2l-1-1.5V6a5 5 0 0 0-5-5zm-2 5.5a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4zm4 0a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4z"/></svg><b id="boss-status">—</b></div>
@@ -1837,6 +2312,7 @@
 <!-- Decorative Main Menu Screen -->
 <div id="main-menu" class="screen hidden">
     <button id="lobby-fs-btn" class="hud-icon-btn lobby-fs-btn" type="button" title="Toggle Fullscreen (G)"><svg class="btn-ico" viewBox="0 0 16 16"><path fill="currentColor" d="M2 2h4.5v1.8H3.8v2.7H2V2zm7.5 0H14v4.5h-1.8V3.8H9.5V2zM2 9.5h1.8v2.7h2.7V14H2V9.5zm10.2 2.7V9.5H14V14H9.5v-1.8h2.7z"/></svg></button>
+    <div class="menu-title-col">
     <div class="title-emblem">
         <span class="emblem-dot"></span>
         <span>Neon Combat Simulation</span>
@@ -1849,12 +2325,17 @@
     </div>
     <p class="subtitle">Endless Circular Bot Battle Royale</p>
     <div class="credits-pill"><span class="coin"></span><span id="menu-credits">0</span><small>CREDITS</small></div>
+    </div><!-- /menu-title-col -->
 
+    <div class="menu-hub-col">
     <div class="menu-card menu-hub">
         <div class="card-corners"></div>
         <div class="callsign-row">
             <label>Callsign / Nickname</label>
-            <input type="text" id="player-name" value="Player" maxlength="14" placeholder="Enter your callsign...">
+            <div class="name-color-row">
+                <input type="text" id="player-name" value="Player" maxlength="14" placeholder="Enter your callsign...">
+                <button class="color-btn" id="open-color-btn" type="button" title="Player color" aria-label="Player color"><canvas id="color-btn-cv" width="64" height="64"></canvas></button>
+            </div>
         </div>
         <button class="primary-btn" id="play-btn">Enter Arena</button>
         <button class="menu-btn" id="open-settings-btn" type="button">
@@ -1888,6 +2369,7 @@
         </div>
         <div class="loadout-note" id="loadout-note">Spawning with: Triple Shot</div>
     </div>
+    </div><!-- /menu-hub-col -->
 </div>
 
 
@@ -1916,6 +2398,17 @@
         </div>
     </div>
     <button class="primary-btn back-btn" id="shop-back-btn">Back to Hub</button>
+</div>
+
+<!-- Player Color Screen -->
+<div id="color-screen" class="screen hidden">
+    <h1>Player Color</h1>
+    <div class="menu-card panel-card color-card">
+        <div class="card-corners"></div>
+        <div class="color-preview"><canvas id="color-preview-cv" width="160" height="160"></canvas></div>
+        <div class="swatch-grid" id="swatch-grid"></div>
+    </div>
+    <button class="primary-btn back-btn" id="color-back-btn" type="button">Done</button>
 </div>
 
 <!-- Settings Screen -->
@@ -1957,6 +2450,32 @@
                 <button class="opt-btn" data-val="false">Music: OFF</button>
             </div>
         </div>
+        <div class="panel-section" id="hud-settings">HUD</div>
+        <div class="setting-row">
+            <div class="setting-info"><strong>HUD Size</strong><span>Scale on-screen info</span></div>
+            <div class="btn-group" data-pref="hudSize"><button class="opt-btn" data-val="s">Small</button><button class="opt-btn active" data-val="m">Medium</button><button class="opt-btn" data-val="l">Large</button></div>
+        </div>
+        <div class="setting-row">
+            <div class="setting-info"><strong>HUD Detail</strong><span>Compact hides FPS, bots and extra ranks</span></div>
+            <div class="btn-group two-col" data-pref="hudDetail"><button class="opt-btn active" data-val="compact">Compact</button><button class="opt-btn" data-val="full">Full</button></div>
+        </div>
+        <div class="setting-row">
+            <div class="setting-info"><strong>Kill Feed</strong><span>Who eliminated whom</span></div>
+            <div class="btn-group two-col" data-pref="killfeed"><button class="opt-btn active" data-val="true">On</button><button class="opt-btn" data-val="false">Off</button></div>
+        </div>
+        <div class="setting-row">
+            <div class="setting-info"><strong>Sprint Button</strong><span>Auto hides it on PC and laptop</span></div>
+            <div class="btn-group" data-pref="sprintBtn"><button class="opt-btn active" data-val="auto">Auto</button><button class="opt-btn" data-val="show">Show</button><button class="opt-btn" data-val="hide">Hide</button></div>
+        </div>
+        <div class="panel-section" style="margin-top:12px">Feel</div>
+        <div class="setting-row">
+            <div class="setting-info"><strong>Haptics</strong><span>Vibration and controller rumble</span></div>
+            <div class="btn-group two-col" data-pref="haptics"><button class="opt-btn active" data-val="true">On</button><button class="opt-btn" data-val="false">Off</button></div>
+        </div>
+        <div class="setting-row">
+            <div class="setting-info"><strong>Arena Effects</strong><span>Screen shake, trails and ambient motion</span></div>
+            <div class="btn-group two-col" data-pref="fx"><button class="opt-btn active" data-val="true">On</button><button class="opt-btn" data-val="false">Off</button></div>
+        </div>
     </div>
     <button class="primary-btn back-btn" id="settings-back-btn">Back</button>
 </div>
@@ -1975,6 +2494,10 @@
                 <div class="ctrl-row">Pause<span><kbd>P</kbd><kbd>Esc</kbd></span></div>
                 <div class="ctrl-row">Sound / Music<span><kbd>M</kbd><kbd>N</kbd></span></div>
                 <div class="ctrl-row">Fullscreen<span><kbd>G</kbd></span></div>
+                <div class="panel-section">Controller</div>
+                <div class="ctrl-row">Move<span>Left stick</span></div>
+                <div class="ctrl-row">Sprint<span>RT / A</span></div>
+                <div class="ctrl-row">Pause<span>Menu</span></div>
             </div>
             <div>
                 <div class="panel-section">Touch</div>
@@ -2393,7 +2916,8 @@ let settings = {
     difficulty: 'medium',
     quality: 'high',
     sound: true,
-    music: true
+    music: true,
+    color: '#38bdf8'
 };
 
 const ICON_SFX_ON = '<svg class="btn-ico" viewBox="0 0 16 16"><path fill="currentColor" d="M2 5.5h3.2L9 2.2v11.6L5.2 10.5H2v-5zm9.5-.8a4.5 4.5 0 0 1 0 6.6l-1.1-1.1a3 3 0 0 0 0-4.4l1.1-1.1z"/></svg>';
@@ -3277,6 +3801,7 @@ function setupOptionGroup(groupId, settingKey, isBool = false) {
             settings[settingKey] = isBool ? (btn.dataset.val === 'true') : btn.dataset.val;
             if (settingKey === 'quality') resizeCanvas();
             if (settingKey === 'sound') syncSoundUI();
+            if (settingKey === 'music') syncMusicUI();
             SoundFX.uiClick();
         });
     });
@@ -3740,7 +4265,7 @@ function spawnBullet(x, y, angle, owner) {
             }
             b.color = owner.tripleShotTimer > 0 ? '#c084fc'
                     : owner.rapidFireTimer > 0 ? '#f59e0b'
-                    : owner.isPlayer ? '#38bdf8' : '#fbbf24';
+                    : owner.isPlayer ? (settings.color || '#38bdf8') : '#fbbf24';
             return;
         }
     }
@@ -3956,7 +4481,7 @@ class Fighter {
 
             const flashColor = this.tripleShotTimer > 0 ? '#c084fc'
                              : this.rapidFireTimer > 0 ? '#f59e0b'
-                             : this.isPlayer ? '#38bdf8' : '#fbbf24';
+                             : this.isPlayer ? (settings.color || '#38bdf8') : '#fbbf24';
             spawnMuzzleFlash(gunTipX, gunTipY, this.angle, flashColor);
 
             if (this.tripleShotTimer > 0) {
@@ -4355,7 +4880,7 @@ function startMatch() {
     loadDailyMissions();
 
     const startPos = getSafeSpawnPosition(false);
-    player = new Fighter(startPos.x, startPos.y, settings.name, '#38bdf8', true);
+    player = new Fighter(startPos.x, startPos.y, settings.name, settings.color || '#38bdf8', true);
 
     const targetPop = QUALITY_CONFIG[settings.quality].botPop;
     for (let i = 0; i < targetPop; i++) {
@@ -4785,6 +5310,23 @@ function drawWorld(camX, camY) {
     drawSpeedLines();
 }
 
+let _sprintBox = { key: '', w: 0, left: 0, top: 0 };
+function getSprintBox() {
+    const btn = document.getElementById('sprint-btn');
+    const hiddenNow = touchControls.classList.contains('hidden');
+    const key = viewW + 'x' + viewH + (hiddenNow ? 'h' : 'v');
+    if (key !== _sprintBox.key) {
+        _sprintBox.key = key;
+        const w = hiddenNow ? 0 : btn.offsetWidth;
+        if (w) {
+            const cs = getComputedStyle(btn);
+            _sprintBox.w = w;
+            _sprintBox.left = viewW - parseFloat(cs.right) - w;
+            _sprintBox.top = viewH - parseFloat(cs.bottom) - btn.offsetHeight;
+        } else _sprintBox.w = 0;
+    }
+    return _sprintBox;
+}
 function drawMinimap() {
     const isPortraitMobile = (viewW <= 500) || (viewH > viewW && viewW <= 900);
     const isLandscapeMobile = (viewW > viewH && viewH <= 560);
@@ -4793,8 +5335,14 @@ function drawMinimap() {
     // Portrait: lift minimap above sprint button; Landscape: place minimap to the left of sprint button
     const bottomLift = isPortraitMobile ? 96 : 0;
     const rightShift = isLandscapeMobile ? 80 : 0;
-    const cx = viewW - mapRadius - margin - rightShift;
-    const cy = viewH - mapRadius - margin - bottomLift;
+    let cx = viewW - mapRadius - margin - rightShift;
+    let cy = viewH - mapRadius - margin - bottomLift;
+    // Keep the minimap clear of the on-screen sprint button (its size now scales with the screen)
+    const sb = getSprintBox();
+    if (sb.w) {
+        if (viewW > viewH) cx = Math.min(cx, sb.left - 12 - mapRadius);
+        else cy = Math.min(cy, sb.top - 12 - mapRadius);
+    }
     const scale = mapRadius / ARENA_RADIUS;
 
     ctx.beginPath();
@@ -4830,7 +5378,7 @@ function drawMinimap() {
 }
 
 function drawJoystick() {
-    if (!joystick.active) return;
+    if (!joystick.active || joystick.pad) return;
 
     ctx.beginPath();
     ctx.arc(joystick.originX, joystick.originY, joystick.maxRadius, 0, Math.PI * 2);
@@ -4883,6 +5431,7 @@ function gameLoop(now) {
         touchSprintHeld ||
         keys['ShiftLeft'] ||
         keys['ShiftRight'] ||
+        keys['GamepadSprint'] ||
         keys['Space']
     );
 
@@ -4992,6 +5541,7 @@ function gameLoop(now) {
                 spawnParticles(b.x, b.y, player.color, 5);
                 b.active = false;
                 if (player.hp <= 0) {
+                    window.killFeedAdd?.(b.owner, player);
                     killerName = b.owner.name;
                     endMatch();
                     return;
@@ -5043,6 +5593,7 @@ function gameLoop(now) {
                     }
                     if (target.isChampion && !target.isBoss) championRespawnTick = frameTick + 900;
                     if (target.isBoss && !b.owner.isPlayer) { bossActive = false; nextBossTick = frameTick + 60 * 90; }
+                    window.killFeedAdd?.(b.owner, target);
                     SoundFX.botKill(b.owner.isPlayer);
                     bots.splice(j, 1);
                 }
@@ -5363,6 +5914,406 @@ syncFullscreenUI();
     // Small delay so first paint shows the logo
     setTimeout(advance, 320);
 })();
+
+// ===== Feature pack: haptics, controller, player color, kill feed, HUD prefs, arena motion =====
+(function () {
+    const $ = id => document.getElementById(id);
+    const root = document.documentElement;
+    const PREF_KEYS = ['color', 'haptics', 'killfeed', 'hudSize', 'hudDetail', 'sprintBtn', 'fx'];
+    const BOOL_KEYS = ['haptics', 'killfeed', 'fx'];
+    const DEFAULTS = { color: '#38bdf8', haptics: true, killfeed: true, hudSize: 'm', hudDetail: 'compact', sprintBtn: 'auto', fx: true };
+    const COLORS = [['#38bdf8','Cyan'],['#60a5fa','Blue'],['#a78bfa','Violet'],['#e879f9','Magenta'],['#f472b6','Pink'],['#f87171','Red'],
+                    ['#fb923c','Orange'],['#facc15','Yellow'],['#a3e635','Lime'],['#4ade80','Green'],['#2dd4bf','Teal'],['#e2e8f0','Silver']];
+
+    Object.assign(settings, DEFAULTS);
+    try {
+        const saved = JSON.parse(localStorage.getItem('cyberArenaPrefs') || '{}');
+        PREF_KEYS.forEach(k => { if (saved[k] !== undefined) settings[k] = saved[k]; });
+    } catch (e) {}
+    if (!COLORS.some(c => c[0] === settings.color)) settings.color = DEFAULTS.color;
+    function savePrefs() {
+        try { const o = {}; PREF_KEYS.forEach(k => o[k] = settings[k]); localStorage.setItem('cyberArenaPrefs', JSON.stringify(o)); } catch (e) {}
+    }
+
+    // ---------- Toast ----------
+    let toastT = 0;
+    function toast(msg) {
+        const el = $('ui-toast'); if (!el) return;
+        el.textContent = msg; el.classList.add('show');
+        clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 2200);
+    }
+
+    // ---------- Gamepad access ----------
+    function getPad() {
+        const list = navigator.getGamepads ? navigator.getGamepads() : [];
+        for (let i = 0; i < list.length; i++) { const g = list[i]; if (g && g.connected) return g; }
+        return null;
+    }
+
+    // ---------- Haptics (phone vibration + controller rumble) ----------
+    let lastHurt = 0;
+    const Haptics = {
+        vib(p) { if (!settings.haptics) return; try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} },
+        rumble(ms, strong, weak) {
+            if (!settings.haptics) return;
+            const gp = getPad(); const a = gp && gp.vibrationActuator;
+            if (a && a.playEffect) { try { a.playEffect('dual-rumble', { startDelay: 0, duration: ms, strongMagnitude: strong, weakMagnitude: weak }).catch(() => {}); } catch (e) {} }
+        },
+        tap() { this.vib(8); },
+        hurt(lost) {
+            const now = performance.now(); if (now - lastHurt < 90) return; lastHurt = now;
+            const ms = Math.min(140, 30 + lost * 3);
+            this.vib(ms); this.rumble(ms, Math.min(1, lost / 30), 0.4);
+        },
+        kill() { this.vib([25, 30, 45]); this.rumble(150, 0.7, 0.9); },
+        pickup() { this.vib(18); this.rumble(70, 0.2, 0.5); },
+        death() { this.vib([80, 40, 170]); this.rumble(420, 1, 1); }
+    };
+
+    // ---------- Arena motion ----------
+    let shake = 0, trailTick = 0;
+    const motes = Array.from({ length: 26 }, () => ({ x: Math.random(), y: Math.random(), r: .8 + Math.random() * 1.8, p: .15 + Math.random() * .5, s: .3 + Math.random() * .7, ph: Math.random() * 6.28 }));
+    function drawMotes(cx, cy) {
+        const t = performance.now() / 1000;
+        ctx.save(); ctx.fillStyle = settings.color;
+        for (let i = 0; i < motes.length; i++) {
+            const m = motes[i];
+            const px = (((m.x * viewW - cx * m.p + Math.sin(t * m.s + m.ph) * 14) % viewW) + viewW) % viewW;
+            const py = (((m.y * viewH - cy * m.p - t * 8 * m.s) % viewH) + viewH) % viewH;
+            ctx.globalAlpha = .10 + .12 * Math.pow(Math.sin(t * m.s * 2 + m.ph), 2);
+            ctx.beginPath(); ctx.arc(px, py, m.r, 0, 6.283); ctx.fill();
+        }
+        ctx.restore();
+    }
+    const _drawWorld = drawWorld;
+    drawWorld = function (cx, cy) {
+        if (settings.fx && shake > .3) { cx += (Math.random() - .5) * shake * 2; cy += (Math.random() - .5) * shake * 2; shake *= .85; } else shake = 0;
+        const r = _drawWorld.call(this, cx, cy);
+        if (settings.fx && settings.quality !== 'potato') drawMotes(cx, cy);
+        return r;
+    };
+
+    // ---------- Gameplay hooks ----------
+    const _takeDamage = Fighter.prototype.takeDamage;
+    Fighter.prototype.takeDamage = function (a) {
+        const hp0 = this.hp, sh0 = this.shield || 0;
+        const r = _takeDamage.call(this, a);
+        if (this.isPlayer) {
+            const lost = (hp0 - this.hp) + (sh0 - (this.shield || 0));
+            if (lost > 0) { Haptics.hurt(lost); shake = Math.max(shake, Math.min(10, 2 + lost * .35)); }
+        }
+        return r;
+    };
+    const _move = Fighter.prototype.move;
+    Fighter.prototype.move = function () {
+        const r = _move.apply(this, arguments);
+        if (this.isPlayer && settings.fx && (++trailTick & 3) === 0) spawnParticles(this.x, this.y, this.isSprinting ? '#7dd3fc' : settings.color, this.isSprinting ? 2 : 1);
+        return r;
+    };
+    const _applyCrate = Fighter.prototype.applyCrate;
+    Fighter.prototype.applyCrate = function () {
+        const r = _applyCrate.apply(this, arguments);
+        if (this.isPlayer) {
+            Haptics.pickup();
+            if (settings.fx) { spawnShockwave(this.x, this.y, '#ffffff', 48); spawnParticles(this.x, this.y, settings.color, 10); }
+        }
+        return r;
+    };
+    const _botKill = SoundFX.botKill;
+    SoundFX.botKill = function (isPlayerKill) {
+        if (isPlayerKill) { Haptics.kill(); shake = Math.max(shake, 3); }
+        return _botKill.apply(this, arguments);
+    };
+    const _endMatch = endMatch;
+    endMatch = function () {
+        Haptics.death(); shake = 0;
+        return _endMatch.apply(this, arguments);
+    };
+    function onMatchStart() {
+        clearFeed(); shake = 0;
+        if (settings.fx && player) { spawnShockwave(player.x, player.y, settings.color, 120); spawnParticles(player.x, player.y, settings.color, 22); }
+        Haptics.vib([20, 40, 30]);
+    }
+    ['play-btn', 'restart-btn', 'rematch-btn'].forEach(id => { const b = $(id); if (b) b.addEventListener('click', () => setTimeout(onMatchStart, 0)); });
+
+    // ---------- Kill feed ----------
+    const feed = $('kill-feed');
+    let lastBotFeed = 0;
+    function clearFeed() { if (feed) feed.textContent = ''; }
+    window.killFeedAdd = function (killer, victim) {
+        if (!feed || !settings.killfeed || !killer || !victim) return;
+        const meKill = killer.isPlayer, meDied = victim.isPlayer;
+        const notable = meKill || meDied || victim.isBoss || victim === currentKing;
+        if (!notable) { const now = performance.now(); if (now - lastBotFeed < 1200) return; lastBotFeed = now; }
+        const row = document.createElement('div');
+        row.className = 'kf-item' + (meKill ? ' me' : '') + (meDied ? ' died' : '') + (notable ? '' : ' bots');
+        const a = document.createElement('b'); a.textContent = meKill ? 'You' : killer.name; a.style.color = killer.color || '#e2e8f0';
+        const m = document.createElement('i'); m.textContent = '\u25B8';
+        const v = document.createElement('b'); v.textContent = (meDied ? 'You' : victim.name) + (victim.isBoss ? ' \u2605' : ''); v.style.color = victim.color || '#e2e8f0';
+        row.append(a, m, v);
+        feed.appendChild(row);
+        while (feed.children.length > 4) feed.removeChild(feed.firstChild);
+        setTimeout(() => row.remove(), 4400);
+    };
+
+    // ---------- Player color ----------
+    function drawShip(cv, color) {
+        if (!cv) return;
+        const c = cv.getContext('2d'); c.clearRect(0, 0, cv.width, cv.height);
+        c.drawImage(getFighterSprite(color, '#94a3b8'), 0, 0, cv.width, cv.height);
+    }
+    function popEl(el) { if (!el) return; el.classList.remove('pop-in'); void el.offsetWidth; el.classList.add('pop-in'); }
+    const grid = $('swatch-grid');
+    COLORS.forEach(([hex, name]) => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'swatch'; b.dataset.color = hex; b.style.setProperty('--sw', hex);
+        b.setAttribute('aria-label', name); b.title = name;
+        b.addEventListener('click', () => { settings.color = hex; applyPrefs(); savePrefs(); SoundFX.uiClick(); Haptics.tap(); popEl($('color-preview-cv')); });
+        grid.appendChild(b);
+    });
+    function closeColor() { SoundFX.uiClick(); $('color-screen').classList.add('hidden'); mainMenu.classList.remove('hidden'); }
+    $('open-color-btn').addEventListener('click', () => { SoundFX.init(); SoundFX.uiClick(); mainMenu.classList.add('hidden'); $('color-screen').classList.remove('hidden'); applyPrefs(); });
+    $('color-back-btn').addEventListener('click', closeColor);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('color-screen').classList.contains('hidden')) closeColor(); });
+
+    // ---------- Preferences (HUD + feel) ----------
+    function applyPrefs() {
+        root.style.setProperty('--hud-k', { s: .85, m: 1, l: 1.2 }[settings.hudSize] || 1);
+        root.style.setProperty('--pc', settings.color);
+        root.classList.toggle('hud-full', settings.hudDetail === 'full');
+        root.classList.toggle('no-killfeed', !settings.killfeed);
+        root.classList.toggle('sprint-show', settings.sprintBtn === 'show');
+        root.classList.toggle('sprint-hide', settings.sprintBtn === 'hide');
+        document.querySelectorAll('[data-pref]').forEach(g => {
+            const cur = String(settings[g.dataset.pref]);
+            g.querySelectorAll('.opt-btn').forEach(b => b.classList.toggle('active', b.dataset.val === cur));
+        });
+        drawShip($('color-btn-cv'), settings.color); drawShip($('color-preview-cv'), settings.color);
+        document.querySelectorAll('.swatch').forEach(s => { const on = s.dataset.color === settings.color; s.classList.toggle('selected', on); s.setAttribute('aria-pressed', on); });
+    }
+    document.querySelectorAll('[data-pref] .opt-btn').forEach(btn => btn.addEventListener('click', () => {
+        const k = btn.parentElement.dataset.pref;
+        settings[k] = BOOL_KEYS.includes(k) ? btn.dataset.val === 'true' : btn.dataset.val;
+        applyPrefs(); savePrefs(); SoundFX.uiClick();
+        if (k === 'haptics' && settings.haptics) { Haptics.vib(35); Haptics.rumble(120, .5, .5); } else Haptics.tap();
+    }));
+    applyPrefs();
+
+    // ---------- Ripple + input-mode ----------
+    document.addEventListener('pointerdown', e => {
+        root.classList.remove('pad-nav');
+        const host = e.target.closest && e.target.closest('.primary-btn,.secondary-btn,.menu-btn,.opt-btn,.shop-buy,.swatch,.color-btn,.loot-chip');
+        if (!host || host.disabled) return;
+        host.classList.add('rip-host');
+        const r = host.getBoundingClientRect(), d = Math.max(r.width, r.height) * 1.6;
+        const s = document.createElement('span'); s.className = 'rip';
+        s.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX - r.left - d / 2}px;top:${e.clientY - r.top - d / 2}px`;
+        host.appendChild(s); setTimeout(() => s.remove(), 650);
+    }, { passive: true });
+
+    // ---------- Controller (Xbox / standard gamepads) ----------
+    // A / bumpers / triggers / L3 = sprint, Start = pause, left stick or D-pad = move & menu focus, A = select, B = back
+    let padPrev = [], navDir = null, navAt = 0;
+    function releasePad() { if (joystick.pad) { joystick.active = false; joystick.pad = false; joystick.force = 0; joystick.dx = 0; joystick.dy = 0; } }
+    function goBack() {
+        if (!pauseScreen.classList.contains('hidden')) { togglePause(); return; }
+        if (!$('color-screen').classList.contains('hidden')) { closeColor(); return; }
+        closePanels();
+    }
+    function navigate(dir) {
+        const scr = document.querySelector('.screen:not(.hidden)'); if (!scr) return;
+        const items = [...scr.querySelectorAll('button:not([disabled]),input[type="text"]')].filter(e => e.getClientRects().length);
+        if (!items.length) return;
+        const cur = items.includes(document.activeElement) ? document.activeElement : null;
+        if (!cur || !dir) { (scr.querySelector('.primary-btn') || items[0]).focus(); return; }
+        const r = cur.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        let best = null, bs = 1e9;
+        for (const el of items) {
+            if (el === cur) continue;
+            const q = el.getBoundingClientRect(), dx = q.left + q.width / 2 - cx, dy = q.top + q.height / 2 - cy;
+            let along, across;
+            if (dir === 'down') { along = dy; across = Math.abs(dx); } else if (dir === 'up') { along = -dy; across = Math.abs(dx); }
+            else if (dir === 'right') { along = dx; across = Math.abs(dy); } else { along = -dx; across = Math.abs(dy); }
+            if (along < 4) continue;
+            const s = along + across * 2.2; if (s < bs) { bs = s; best = el; }
+        }
+        if (best) { best.focus(); best.scrollIntoView({ block: 'nearest', inline: 'nearest' }); Haptics.tap(); }
+    }
+    function padLoop() {
+        const gp = getPad();
+        if (gp) {
+            const bt = i => !!(gp.buttons[i] && gp.buttons[i].pressed);
+            const edge = i => bt(i) && !padPrev[i];
+            let lx = gp.axes[0] || 0, ly = gp.axes[1] || 0;
+            if (bt(14)) lx = -1; if (bt(15)) lx = 1; if (bt(12)) ly = -1; if (bt(13)) ly = 1;
+            const mag = Math.hypot(lx, ly);
+            if ((mag > .3 || gp.buttons.some(b => b.pressed)) && !root.classList.contains('pad-nav')) root.classList.add('pad-nav');
+            if (joystick.pad && !joystick.active) joystick.pad = false;
+            const playing = gameRunning && !isPaused;
+            if (playing) {
+                if (edge(9)) togglePause();
+                else {
+                    keys['GamepadSprint'] = bt(0) || bt(4) || bt(5) || bt(6) || bt(7) || bt(10);
+                    const dead = .2;
+                    if (mag > dead) {
+                        if (!joystick.active || joystick.pad) {
+                            const f = Math.min(1, (mag - dead) / (1 - dead)), a = Math.atan2(ly, lx);
+                            joystick.active = true; joystick.pad = true; joystick.force = f; joystick.angle = a;
+                            joystick.dx = Math.cos(a) * f; joystick.dy = Math.sin(a) * f;
+                        }
+                    } else releasePad();
+                }
+            } else {
+                keys['GamepadSprint'] = false; releasePad();
+                if (edge(9) && !gameRunning && !$('main-menu').classList.contains('hidden')) $('play-btn').click();
+                else if (edge(9) && gameRunning && isPaused) togglePause();
+                else {
+                    if (edge(1)) goBack();
+                    if (edge(0)) {
+                        const el = document.activeElement;
+                        const scr = document.querySelector('.screen:not(.hidden)');
+                        if (scr && el && scr.contains(el) && el.tagName !== 'INPUT') el.click(); else navigate(null);
+                    }
+                    let dir = null;
+                    if (ly < -.55) dir = 'up'; else if (ly > .55) dir = 'down'; else if (lx < -.55) dir = 'left'; else if (lx > .55) dir = 'right';
+                    const now = performance.now();
+                    if (dir && (dir !== navDir || now - navAt > 220)) { navigate(dir); navAt = now; }
+                    navDir = dir;
+                }
+            }
+            padPrev = gp.buttons.map(b => b.pressed);
+        } else { releasePad(); keys['GamepadSprint'] = false; }
+        requestAnimationFrame(padLoop);
+    }
+    window.addEventListener('gamepadconnected', () => { toast('Controller connected'); Haptics.rumble(160, .4, .4); });
+    window.addEventListener('gamepaddisconnected', () => { toast('Controller disconnected'); if (gameRunning && !isPaused) pauseMatch(); });
+    requestAnimationFrame(padLoop);
+})();
 </script>
+
+<script>
+/* Cyber Arena UI enhancement layer. Gameplay systems remain unchanged. */
+(() => {
+    'use strict';
+    const root = document.documentElement;
+    const mainMenu = document.getElementById('main-menu');
+    if (!mainMenu) return;
+
+    const themes = [
+        { id: 'cyan', label: 'CYAN', accent: '#38bdf8', rgb: '56, 189, 248', secondary: '#818cf8', glow: 'rgba(56, 189, 248, .28)' },
+        { id: 'violet', label: 'VIOLET', accent: '#a78bfa', rgb: '167, 139, 250', secondary: '#f472b6', glow: 'rgba(167, 139, 250, .30)' },
+        { id: 'ember', label: 'EMBER', accent: '#fb923c', rgb: '251, 146, 60', secondary: '#fb7185', glow: 'rgba(251, 146, 60, .28)' }
+    ];
+    let themeIndex = 0;
+    try {
+        const saved = localStorage.getItem('cyberArenaUiTheme');
+        const found = themes.findIndex(t => t.id === saved);
+        if (found >= 0) themeIndex = found;
+    } catch (_) { /* Storage may be disabled in private browsing. */ }
+
+    const themeButton = document.createElement('button');
+    themeButton.type = 'button';
+    themeButton.id = 'theme-cycle-btn';
+    themeButton.className = 'theme-cycle-btn';
+    themeButton.setAttribute('aria-label', 'Change interface theme');
+    themeButton.title = 'Cycle interface theme';
+    themeButton.innerHTML = '<span class="theme-swatch" aria-hidden="true"></span><span class="theme-label">THEME · CYAN</span>';
+    mainMenu.appendChild(themeButton);
+
+    function applyTheme(index, persist) {
+        themeIndex = (index + themes.length) % themes.length;
+        const theme = themes[themeIndex];
+        root.style.setProperty('--ui-accent', theme.accent);
+        root.style.setProperty('--ui-accent-rgb', theme.rgb);
+        root.style.setProperty('--ui-secondary', theme.secondary);
+        root.style.setProperty('--ui-glow', theme.glow);
+        const label = themeButton.querySelector('.theme-label');
+        if (label) label.textContent = 'THEME · ' + theme.label;
+        themeButton.setAttribute('aria-label', 'Change interface theme. Current theme: ' + theme.label.toLowerCase());
+        themeButton.title = 'Current theme: ' + theme.label + ' — click to change';
+        if (persist) {
+            try { localStorage.setItem('cyberArenaUiTheme', theme.id); } catch (_) { /* Continue without persistence. */ }
+        }
+    }
+    themeButton.addEventListener('click', () => {
+        applyTheme(themeIndex + 1, true);
+        try { if (typeof SoundFX !== 'undefined' && SoundFX && typeof SoundFX.uiClick === 'function') SoundFX.uiClick(); } catch (_) {}
+    });
+    applyTheme(themeIndex, false);
+
+    const titleColumn = mainMenu.querySelector('.menu-title-col');
+    const subtitle = titleColumn && titleColumn.querySelector('.subtitle');
+    if (titleColumn && subtitle && !titleColumn.querySelector('.menu-statusline')) {
+        const status = document.createElement('div');
+        status.className = 'menu-statusline';
+        status.setAttribute('aria-label', 'Arena systems ready');
+        status.innerHTML = '<span class="status-dot" aria-hidden="true"></span><span>ARENA SYSTEMS READY</span><span class="status-sep">◆</span><span>AUTO-TARGET ONLINE</span>';
+        subtitle.insertAdjacentElement('afterend', status);
+    }
+
+    const loadout = mainMenu.querySelector('.loadout');
+    const loadoutTitle = loadout && loadout.querySelector('.panel-section');
+    if (loadout && loadoutTitle && !loadout.querySelector('.loadout-random-btn')) {
+        const heading = document.createElement('div');
+        heading.className = 'loadout-heading-row';
+        loadoutTitle.parentNode.insertBefore(heading, loadoutTitle);
+        heading.appendChild(loadoutTitle);
+        const randomButton = document.createElement('button');
+        randomButton.type = 'button';
+        randomButton.className = 'loadout-random-btn';
+        randomButton.textContent = 'RANDOM ↻';
+        randomButton.title = 'Choose a random starting power';
+        randomButton.setAttribute('aria-label', 'Randomize starting power');
+        heading.appendChild(randomButton);
+        randomButton.addEventListener('click', () => {
+            const choices = [...loadout.querySelectorAll('.loot-chip.selectable')];
+            if (!choices.length) return;
+            const current = choices.findIndex(chip => chip.classList.contains('selected'));
+            let next = Math.floor(Math.random() * choices.length);
+            if (choices.length > 1 && next === current) next = (next + 1) % choices.length;
+            choices[next].click();
+        });
+    }
+
+    // Give menu cards a soft cursor-following highlight on pointer devices.
+    const glowTargets = document.querySelectorAll('.menu-card, .shop-item, .mission-card');
+    glowTargets.forEach(card => {
+        card.dataset.uiGlow = '1';
+        card.addEventListener('pointermove', event => {
+            if (event.pointerType === 'touch') return;
+            const rect = card.getBoundingClientRect();
+            if (!rect.width || !rect.height) return;
+            const x = ((event.clientX - rect.left) / rect.width) * 100;
+            const y = ((event.clientY - rect.top) / rect.height) * 100;
+            card.style.setProperty('--mx', Math.max(0, Math.min(100, x)) + '%');
+            card.style.setProperty('--my', Math.max(0, Math.min(100, y)) + '%');
+            if (card.classList.contains('menu-card')) card.classList.add('ui-hover');
+        }, { passive: true });
+        card.addEventListener('pointerleave', () => {
+            card.style.setProperty('--mx', '50%');
+            card.style.setProperty('--my', '50%');
+            card.classList.remove('ui-hover');
+        }, { passive: true });
+    });
+
+    // If a screen is opened later (shop / missions), add the same glow affordance.
+    const observer = new MutationObserver(() => {
+        document.querySelectorAll('.menu-card:not([data-ui-glow]), .shop-item:not([data-ui-glow]), .mission-card:not([data-ui-glow])').forEach(card => {
+            card.dataset.uiGlow = '1';
+            card.addEventListener('pointermove', event => {
+                if (event.pointerType === 'touch') return;
+                const rect = card.getBoundingClientRect();
+                if (!rect.width || !rect.height) return;
+                card.style.setProperty('--mx', ((event.clientX - rect.left) / rect.width * 100) + '%');
+                card.style.setProperty('--my', ((event.clientY - rect.top) / rect.height * 100) + '%');
+                if (card.classList.contains('menu-card')) card.classList.add('ui-hover');
+            }, { passive: true });
+            card.addEventListener('pointerleave', () => card.classList.remove('ui-hover'), { passive: true });
+        });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+})();
+</script>
+
 </body>
 </html>
